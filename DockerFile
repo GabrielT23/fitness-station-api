@@ -4,16 +4,22 @@ FROM node:18-alpine
 # Defina o diretório de trabalho dentro do contêiner
 WORKDIR /usr/src/app
 
-# Copie o arquivo package.json e package-lock.json para o diretório de trabalho
+# Copie os arquivos de dependências
 COPY package*.json ./
+
+# Copie a pasta do Prisma para que o schema seja encontrado
+COPY prisma ./prisma
 
 # Instale as dependências
 RUN npm install
 
+# Caso o class-transformer não esteja no package.json, instale-o
 RUN npm install class-transformer
+
+# Gere o Prisma Client (agora o schema.prisma já está disponível)
 RUN npx prisma generate
 
-# Copie todo o código da aplicação para o diretório de trabalho
+# Copie o restante do código da aplicação
 COPY . .
 
 # Compile o código TypeScript para JavaScript
