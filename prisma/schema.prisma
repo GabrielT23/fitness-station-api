@@ -32,6 +32,7 @@ model User {
   username        String          @unique
   password        String
   role            Role            @default(client)
+  lastPayment     DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   company         Company         @relation(fields: [companyId], references: [id])

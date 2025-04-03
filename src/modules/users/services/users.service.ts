@@ -53,6 +53,13 @@ export class UsersService {
     return user;
   }
 
+  async setPayment(id: string): Promise<Omit<User, "password">> {
+    const userExist = await this.usersRepository.findById(id);
+    userExist.lastPayment = new Date();
+    const {password, ...user} = await this.usersRepository.update(id, userExist);
+    return user;
+  }
+
   async remove(id: string): Promise<void> {
     const userExist = await this.usersRepository.findById(id);
     if (!userExist) throw new NotFoundException('Usuário não existe');

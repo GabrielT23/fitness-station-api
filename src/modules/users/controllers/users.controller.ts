@@ -45,6 +45,13 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @RoleUser('admin')
+  @Patch('/set-payment/:id')
+  async setPayment(@Param('id') id: string) {
+    return await this.usersService.setPayment(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('admin')
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return await this.usersService.remove(id);
