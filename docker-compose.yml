@@ -2,11 +2,17 @@ version: '3.8'
 
 services:
   postgres:
-    container_name: fitness-station
-    image: postgres
-    ports:
-      - "5432:5432"
+    image: postgres:16
+    container_name: fitness_station_postgres
+    restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: docker
-      POSTGRES_DB: fitness-station
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
