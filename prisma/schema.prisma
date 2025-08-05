@@ -37,9 +37,21 @@ model User {
   updatedAt       DateTime        @updatedAt
   company         Company         @relation(fields: [companyId], references: [id])
   companyId       String
+  token     Token?   @relation("UserToken")
   workoutSheets   WorkoutSheet[]  @relation("WorkoutSheetUsers")
   @@map("users")
   WorkoutSheetUsers WorkoutSheetUsers[]
+}
+
+model Token {
+  id            String   @id @default(uuid())
+  refreshToken  String   @unique
+  expiresAt     DateTime // Data de expiração do refresh token (7 dias)
+  user          User     @relation("UserToken", fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@map("token")
 }
 
 model Company {
