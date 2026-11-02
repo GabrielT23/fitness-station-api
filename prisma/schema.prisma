@@ -28,7 +28,7 @@ enum MuscleGroup {
 
 model User {
   id              String          @id @default(uuid())
-  name            String          
+  name            String
   username        String          @unique
   password        String
   role            Role            @default(client)
@@ -41,6 +41,7 @@ model User {
   workoutSheets   WorkoutSheet[]  @relation("WorkoutSheetUsers")
   @@map("users")
   WorkoutSheetUsers WorkoutSheetUsers[]
+  assessmentSheets  AssessmentSheet[]
 }
 
 model Token {
@@ -103,6 +104,44 @@ model Exercise {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   @@map("exercises")
+}
+
+model AssessmentSheet {
+  id               String   @id @default(uuid())
+  date             DateTime
+  altura           Float?
+  peso             Float?
+  bracoD           Float?
+  bracoE           Float?
+  antebracoD       Float?
+  antebracoE       Float?
+  bicepsD          Float?
+  bicepsE          Float?
+  torax1           Float?
+  torax2           Float?
+  cintura          Float?
+  abdomen          Float?
+  quadril          Float?
+  coxaSupD         Float?
+  coxaSupE         Float?
+  coxaMedD         Float?
+  coxaMedE         Float?
+  coxaInfD         Float?
+  coxaInfE         Float?
+  pantD            Float?
+  pantE            Float?
+  imc              Float?
+  gorduraPercent   Float?
+  musculoPercent   Float?
+  visceralFat      Float?
+  idadeCorporal    Float?
+  metabolismoBasal Float?
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("assessment_sheets")
 }
 
 model WorkoutSheetUsers {
