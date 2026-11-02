@@ -81,7 +81,7 @@ export class WorkoutSheetsService {
   }
 
   async unLinkUserToWorkoutSheet(userId: string, workoutSheetId: string): Promise<void> {
-    await this.workoutSheetsRepository.linkUserToWorkoutSheet(userId, workoutSheetId);
+    await this.workoutSheetsRepository.unLinkUserToWorkoutSheet(userId, workoutSheetId);
   }
 
   async remove(id: string): Promise<void> {

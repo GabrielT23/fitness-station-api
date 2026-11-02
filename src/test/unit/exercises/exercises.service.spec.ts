@@ -124,7 +124,7 @@ describe('ExercisesService', () => {
     it('should throw NotFoundException if exercise not found', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update('1', { id: '1', name: 'Test', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60, workoutId: '1' })).rejects.toThrow(
+      await expect(service.update('1', { name: 'Test', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60 })).rejects.toThrow(
         NotFoundException,
       );
     });

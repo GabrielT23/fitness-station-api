@@ -1,8 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { ExercisesService } from '../services/exercises.service';
 import { CreateExerciseDto, UpdateExerciseDto } from '../dtos/exerciseDTO';
+import { AuthGuard } from '@modules/auth/providers/auth.guard';
+import { RoleUser } from '@modules/auth/role.decorator';
 
 @Controller('exercises')
+@UseGuards(AuthGuard)
+@RoleUser('admin')
 export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) {}
 

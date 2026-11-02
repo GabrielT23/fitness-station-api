@@ -30,8 +30,28 @@ export class CreateExerciseDto {
   workoutId: string;
 }
 
-export class UpdateExerciseDto extends CreateExerciseDto {
-  @IsUUID()
-  @IsNotEmpty()
-  id: string;
+export class UpdateExerciseDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsInt()
+  @IsOptional()
+  reps?: number;
+
+  @IsInt()
+  @IsOptional()
+  sets?: number;
+
+  @IsString()
+  @IsOptional()
+  muscleGroup?: string;
+
+  @IsInt()
+  @IsOptional()
+  restPeriod?: number;
+
+  @IsString()
+  @IsOptional()
+  videoLink?: string;
 }

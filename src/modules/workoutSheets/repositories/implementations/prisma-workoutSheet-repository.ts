@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
 import { IWorkoutSheetsRepository } from '../IWorkoutSheets-repository';
 import { CreateWorkoutSheetDto, ExerciseDto, UpdateWorkoutSheetDto } from '../../dtos/workoutSheetDto';
@@ -52,10 +52,15 @@ export class WorkoutSheetsRepository implements IWorkoutSheetsRepository {
   async linkUserToWorkoutSheet(userId: string, workoutSheetId: string): Promise<void> {
     const userExists = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!userExists) throw new Error('User not found');
-  
+
     const workoutSheetExists = await this.prisma.workoutSheet.findUnique({ where: { id: workoutSheetId } });
     if (!workoutSheetExists) throw new Error('WorkoutSheet not found');
-  
+
+    const alreadyLinked = await this.prisma.workoutSheetUsers.findUnique({
+      where: { userId_workoutSheetId: { userId, workoutSheetId } },
+    });
+    if (alreadyLinked) throw new ConflictException('Esta ficha de treino já está atribuída a este usuário');
+
     await this.prisma.workoutSheetUsers.create({
       data: {
         userId,
@@ -125,6 +130,11 @@ export class WorkoutSheetsRepository implements IWorkoutSheetsRepository {
         workouts: {
           include: {
             exercises: true,
+          },
+        },
+        WorkoutSheetUsers: {
+          include: {
+            user: true,
           },
         },
       },
