@@ -51,15 +51,13 @@ export class WorkoutSheetsService {
 
     const { name, type, isActive, companyId } = updateWorkoutSheetDto;
 
-    if(name) workoutSheet.name = name;
-    if(type) workoutSheet.type = type as WorkoutType;
-    if(isActive) workoutSheet.isActive = isActive;
-    if(companyId) workoutSheet.companyId = companyId;
+    const updateData: Partial<WorkoutSheet> = {};
+    if (name !== undefined) updateData.name = name;
+    if (type !== undefined) updateData.type = type as WorkoutType;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (companyId !== undefined) updateData.companyId = companyId;
 
-
-    const updatedWorkoutSheet = await this.workoutSheetsRepository.updateWorkoutSheet(id, workoutSheet);
-
-    return updatedWorkoutSheet;
+    return this.workoutSheetsRepository.updateWorkoutSheet(id, updateData);
   }
 
   async findAll(): Promise<WorkoutSheet[]> {

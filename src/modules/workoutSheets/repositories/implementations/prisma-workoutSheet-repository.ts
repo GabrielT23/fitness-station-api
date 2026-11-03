@@ -42,11 +42,16 @@ export class WorkoutSheetsRepository implements IWorkoutSheetsRepository {
   }
 
   async updateWorkoutSheet(id: string, data: Partial<WorkoutSheet>): Promise<WorkoutSheet> {
-    const workoutSheetUpdate = await this.prisma.workoutSheet.update({
+    const { name, type, isActive, companyId } = data;
+    return this.prisma.workoutSheet.update({
       where: { id },
-      data,
+      data: {
+        ...(name !== undefined && { name }),
+        ...(type !== undefined && { type: type as WorkoutType }),
+        ...(isActive !== undefined && { isActive }),
+        ...(companyId !== undefined && { companyId }),
+      },
     });
-    return workoutSheetUpdate;
   }
   
   async linkUserToWorkoutSheet(userId: string, workoutSheetId: string): Promise<void> {
