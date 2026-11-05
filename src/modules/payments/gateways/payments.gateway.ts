@@ -13,7 +13,7 @@ import { Server, Socket } from 'socket.io';
 import { configuration } from '@config/configuration';
 
 @Injectable()
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({ cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 5000 })
 export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 
