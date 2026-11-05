@@ -26,6 +26,43 @@ enum MuscleGroup {
   CORE
 }
 
+enum InvoiceStatus {
+  UNPAID
+  OVERDUE
+  PAID
+  CANCELLED
+}
+
+model Plan {
+  id            String    @id @default(uuid())
+  name          String
+  value         Float     @default(0)
+  toleranceDays Int       @default(5)
+  isExclusive   Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  users         User[]
+  invoices      Invoice[]
+  @@map("plans")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  userId         String
+  planId         String
+  amount         Float
+  dueDate        DateTime
+  paidAt         DateTime?
+  status         InvoiceStatus @default(UNPAID)
+  referenceMonth String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           Plan          @relation(fields: [planId], references: [id])
+  @@map("invoices")
+}
+
 model User {
   id              String          @id @default(uuid())
   name            String
@@ -33,15 +70,18 @@ model User {
   password        String
   role            Role            @default(client)
   lastPayment     DateTime?
+  planId          String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   company         Company         @relation(fields: [companyId], references: [id])
   companyId       String
-  token     Token?   @relation("UserToken")
+  plan            Plan?           @relation(fields: [planId], references: [id])
+  token           Token?          @relation("UserToken")
   workoutSheets   WorkoutSheet[]  @relation("WorkoutSheetUsers")
-  @@map("users")
   WorkoutSheetUsers WorkoutSheetUsers[]
   assessmentSheets  AssessmentSheet[]
+  invoices        Invoice[]
+  @@map("users")
 }
 
 model Token {

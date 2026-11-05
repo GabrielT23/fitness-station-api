@@ -45,4 +45,11 @@ export class UsersRepository implements IUsersRepository {
       where: { id },
     });
   }
+
+  async assignPlan(id: string, planId: string | null): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { planId },
+    });
+  }
 }

@@ -29,3 +29,9 @@ export class CreateUserDto {
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
 
+export class AssignPlanDto {
+  @IsUUID()
+  @IsOptional()
+  planId?: string | null;
+}
+

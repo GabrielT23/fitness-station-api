@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
+import { AssignPlanDto, CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
 import { IUsersRepository } from '../repositories/IUsers-repository';
 import { hash } from 'bcryptjs';
 import { User } from '@prisma/client';
@@ -64,5 +64,12 @@ export class UsersService {
     const userExist = await this.usersRepository.findById(id);
     if (!userExist) throw new NotFoundException('Usuário não existe');
     await this.usersRepository.deleteById(id);
+  }
+
+  async assignPlan(id: string, dto: AssignPlanDto): Promise<Omit<User, 'password'>> {
+    const userExist = await this.usersRepository.findById(id);
+    if (!userExist) throw new NotFoundException('Usuário não existe');
+    const { password, ...user } = await this.usersRepository.assignPlan(id, dto.planId ?? null);
+    return user;
   }
 }

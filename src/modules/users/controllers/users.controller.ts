@@ -10,7 +10,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
+import { AssignPlanDto, CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
 import { UsersService } from '../services/users.service';
 
 @Controller('/users')
@@ -48,6 +48,13 @@ export class UsersController {
   @Patch('/set-payment/:id')
   async setPayment(@Param('id') id: string) {
     return await this.usersService.setPayment(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('admin')
+  @Patch(':id/plan')
+  async assignPlan(@Param('id') id: string, @Body() assignPlanDto: AssignPlanDto) {
+    return await this.usersService.assignPlan(id, assignPlanDto);
   }
 
   @UseGuards(AuthGuard)
