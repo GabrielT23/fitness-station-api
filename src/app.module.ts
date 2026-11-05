@@ -13,6 +13,7 @@ import { ExercisesModule } from '@modules/exercises/exercises.module';
 import { AssessmentSheetsModule } from '@modules/assessmentSheets';
 import { PlansModule } from '@modules/plans';
 import { InvoicesModule } from '@modules/invoices';
+import { PaymentsModule } from '@modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { InvoicesModule } from '@modules/invoices';
     AssessmentSheetsModule,
     PlansModule,
     InvoicesModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}
