@@ -71,40 +71,67 @@ export class PaymentsService {
   }
 
   async handleWebhook(body: Record<string, any>, headers: Record<string, string>) {
+    this.logger.log(`[webhook] recebido | type=${body.type} | data.id=${body.data?.id}`);
+    this.logger.debug(`[webhook] headers x-signature=${headers['x-signature'] ?? 'ausente'}`);
+
     if (process.env.MP_WEBHOOK_SECRET) {
+      this.logger.log(`[webhook] validando assinatura...`);
       this.validateSignature(body, headers);
+      this.logger.log(`[webhook] assinatura válida`);
+    } else {
+      this.logger.warn(`[webhook] MP_WEBHOOK_SECRET não configurado — validação ignorada`);
     }
 
-    if (body.type !== 'payment') return { ok: true };
+    if (body.type !== 'payment') {
+      this.logger.log(`[webhook] tipo ignorado: ${body.type}`);
+      return { ok: true };
+    }
 
     const paymentId = String(body.data?.id);
-    if (!paymentId) return { ok: true };
+    if (!paymentId) {
+      this.logger.warn(`[webhook] data.id ausente no payload`);
+      return { ok: true };
+    }
 
+    this.logger.log(`[webhook] buscando pagamento MP id=${paymentId}...`);
     const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
     const paymentApi = new Payment(client);
 
     let mpPayment: any;
     try {
       mpPayment = await paymentApi.get({ id: paymentId });
-    } catch {
-      this.logger.warn(`Could not fetch MP payment ${paymentId}`);
+      this.logger.log(`[webhook] pagamento MP obtido | status=${mpPayment?.status} | status_detail=${mpPayment?.status_detail}`);
+    } catch (err: any) {
+      this.logger.warn(`[webhook] falha ao buscar pagamento MP ${paymentId}: ${err.message}`);
       return { ok: true };
     }
 
-    if (mpPayment?.status !== 'approved') return { ok: true };
+    if (mpPayment?.status !== 'approved') {
+      this.logger.log(`[webhook] pagamento não aprovado (status=${mpPayment?.status}) — nenhuma ação`);
+      return { ok: true };
+    }
 
+    this.logger.log(`[webhook] pagamento aprovado! Buscando fatura com mpPaymentId=${paymentId}...`);
     const invoice = await this.prisma.invoice.findFirst({
       where: { mpPaymentId: paymentId },
     });
 
-    if (!invoice || invoice.status === 'PAID') return { ok: true };
+    if (!invoice) {
+      this.logger.warn(`[webhook] nenhuma fatura encontrada com mpPaymentId=${paymentId}`);
+      return { ok: true };
+    }
+    if (invoice.status === 'PAID') {
+      this.logger.log(`[webhook] fatura ${invoice.id} já estava PAID — ignorando`);
+      return { ok: true };
+    }
 
     await this.prisma.invoice.update({
       where: { id: invoice.id },
       data: { status: 'PAID', paidAt: new Date() },
     });
+    this.logger.log(`[webhook] fatura ${invoice.id} atualizada para PAID`);
 
-    this.logger.log(`Invoice ${invoice.id} marked as PAID via PIX`);
+    this.logger.log(`[webhook] disparando evento socket para invoice:${invoice.id}...`);
     this.paymentsGateway.emitPaymentConfirmed(invoice.id);
 
     return { ok: true };
