@@ -46,6 +46,40 @@ export class InvoicesService {
     await this.invoicesRepository.deleteById(id);
   }
 
+  async generateForUser(userId: string, month?: string): Promise<{ created: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { plan: true },
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    if (!user.plan) throw new NotFoundException('Usuário não possui plano ativo');
+    if (user.plan.isExclusive) {
+      return { created: false, message: 'Plano exclusivo não gera faturas' };
+    }
+    if (!user.plan.isActive) {
+      return { created: false, message: 'Plano inativo não gera faturas' };
+    }
+
+    const targetMonth = month ?? this.currentMonth();
+    const alreadyExists = await this.invoicesRepository.existsForUserInMonth(userId, targetMonth);
+    if (alreadyExists) {
+      return { created: false, message: `Fatura de ${targetMonth} já existe` };
+    }
+
+    const [year, mon] = targetMonth.split('-').map(Number);
+    const dueDate = new Date(year, mon - 1, 5);
+
+    await this.invoicesRepository.create({
+      userId: user.id,
+      planId: user.planId!,
+      amount: user.plan.value,
+      dueDate,
+      referenceMonth: targetMonth,
+    });
+
+    return { created: true, message: `Fatura de ${targetMonth} gerada com sucesso` };
+  }
+
   async generateMonthly(dto: GenerateMonthlyInvoicesDto): Promise<{ created: number; skipped: number }> {
     const targetMonth = dto.month ?? this.currentMonth();
 

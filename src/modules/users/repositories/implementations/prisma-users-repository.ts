@@ -64,6 +64,7 @@ export class UsersRepository implements IUsersRepository {
     return this.prisma.user.update({
       where: { id },
       data: { planId },
+      include: { plan: true },
     });
   }
 }

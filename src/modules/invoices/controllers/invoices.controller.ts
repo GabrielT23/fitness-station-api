@@ -51,6 +51,12 @@ export class InvoicesController {
     return this.invoicesService.generateMonthly(dto);
   }
 
+  @Post('generate-for-user/:userId')
+  @RoleUser('admin')
+  async generateForUser(@Param('userId') userId: string, @Body() dto: GenerateMonthlyInvoicesDto) {
+    return this.invoicesService.generateForUser(userId, dto.month);
+  }
+
   @Patch('mark-overdue')
   @RoleUser('admin')
   async markOverdue() {
