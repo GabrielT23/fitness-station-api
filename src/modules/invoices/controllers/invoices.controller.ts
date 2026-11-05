@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { CreateInvoiceDto, GenerateMonthlyInvoicesDto, UpdateInvoiceStatusDto } from '../dtos/invoiceDto';
@@ -38,6 +39,11 @@ export class InvoicesController {
   @Get('user/:userId/payment-status')
   async getPaymentStatus(@Param('userId') userId: string) {
     return this.invoicesService.getPaymentStatus(userId);
+  }
+
+  @Get('billing-check')
+  async billingCheck(@Req() req: any) {
+    return this.invoicesService.getBillingCheck(req.user.id);
   }
 
   @Get(':id')

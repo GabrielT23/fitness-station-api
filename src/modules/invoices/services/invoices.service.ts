@@ -152,6 +152,29 @@ export class InvoicesService {
     return { status: pending.length > 0 ? 'DEBTOR' : 'CREDITOR' };
   }
 
+  async getBillingCheck(userId: string): Promise<{ status: 'OK' | 'UNPAID_WARNING' | 'BLOCKED' }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { plan: true },
+    });
+
+    if (!user || !user.plan || user.plan.isExclusive) {
+      return { status: 'OK' };
+    }
+
+    const hasOverdue = await this.prisma.invoice.count({
+      where: { userId, status: InvoiceStatus.OVERDUE },
+    });
+    if (hasOverdue > 0) return { status: 'BLOCKED' };
+
+    const hasUnpaid = await this.prisma.invoice.count({
+      where: { userId, status: InvoiceStatus.UNPAID },
+    });
+    if (hasUnpaid > 0) return { status: 'UNPAID_WARNING' };
+
+    return { status: 'OK' };
+  }
+
   private currentMonth(): string {
     const now = new Date();
     const year = now.getFullYear();
