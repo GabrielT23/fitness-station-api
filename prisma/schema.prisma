@@ -70,6 +70,8 @@ model User {
   username        String          @unique
   password        String
   role            Role            @default(client)
+  cpf             String?
+  email           String?
   lastPayment     DateTime?
   planId          String?
   isFrozen        Boolean         @default(false)

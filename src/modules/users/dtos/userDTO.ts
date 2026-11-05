@@ -35,3 +35,21 @@ export class AssignPlanDto {
   planId?: string | null;
 }
 
+export class UpdateProfileDto {
+  @IsString()
+  @IsOptional()
+  cpf?: string;
+
+  @IsEmail({}, { message: 'E-mail inválido' })
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  currentPassword?: string;
+
+  @IsString()
+  @IsOptional()
+  newPassword?: string;
+}
+

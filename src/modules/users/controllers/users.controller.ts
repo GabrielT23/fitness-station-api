@@ -8,9 +8,10 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
-import { AssignPlanDto, CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
+import { AssignPlanDto, CreateUserDto, UpdateProfileDto, UpdateUserDto } from '../dtos/userDTO';
 import { UsersService } from '../services/users.service';
 
 @Controller('/users')
@@ -27,6 +28,18 @@ export class UsersController {
   @Get()
   async findAll() {
     return await this.usersService.findAll();
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('me')
+  async getMe(@Req() req: any) {
+    return await this.usersService.getMe(req.user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('me')
+  async updateMe(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    return await this.usersService.updateMyProfile(req.user.id, dto);
   }
 
   @UseGuards(AuthGuard)

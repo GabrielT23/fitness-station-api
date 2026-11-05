@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AssignPlanDto, CreateUserDto, UpdateUserDto } from '../dtos/userDTO';
+import { AssignPlanDto, CreateUserDto, UpdateProfileDto, UpdateUserDto } from '../dtos/userDTO';
 import { IUsersRepository } from '../repositories/IUsers-repository';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { User } from '@prisma/client';
 
 @Injectable()
@@ -86,5 +87,30 @@ export class UsersService {
     if (!userExist) throw new NotFoundException('Usuário não existe');
     const { password, ...user } = await this.usersRepository.assignPlan(id, dto.planId ?? null);
     return user;
+  }
+
+  async getMe(id: string): Promise<Omit<User, 'password'>> {
+    const user = await this.usersRepository.findById(id);
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    const { password, ...rest } = user;
+    return rest;
+  }
+
+  async updateMyProfile(id: string, dto: UpdateProfileDto): Promise<Omit<User, 'password'>> {
+    const user = await this.usersRepository.findById(id);
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    if (dto.newPassword) {
+      if (!dto.currentPassword) throw new BadRequestException('Informe a senha atual para alterá-la');
+      const matches = await compare(dto.currentPassword, user.password);
+      if (!matches) throw new BadRequestException('Senha atual incorreta');
+      (user as any).password = await hash(dto.newPassword, 8);
+    }
+
+    if (dto.cpf !== undefined) (user as any).cpf = dto.cpf;
+    if (dto.email !== undefined) (user as any).email = dto.email;
+
+    const { password, ...rest } = await this.usersRepository.update(id, user);
+    return rest;
   }
 }
