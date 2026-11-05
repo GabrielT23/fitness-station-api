@@ -59,6 +59,20 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @RoleUser('admin')
+  @Patch(':id/freeze')
+  async freeze(@Param('id') id: string) {
+    return await this.usersService.freeze(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('admin')
+  @Patch(':id/unfreeze')
+  async unfreeze(@Param('id') id: string) {
+    return await this.usersService.unfreeze(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('admin')
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return await this.usersService.remove(id);

@@ -60,10 +60,25 @@ export class UsersService {
     return user;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<Omit<User, 'password'>> {
     const userExist = await this.usersRepository.findById(id);
     if (!userExist) throw new NotFoundException('Usuário não existe');
-    await this.usersRepository.deleteById(id);
+    const { password, ...user } = await this.usersRepository.softDelete(id);
+    return user;
+  }
+
+  async freeze(id: string): Promise<Omit<User, 'password'>> {
+    const userExist = await this.usersRepository.findById(id);
+    if (!userExist) throw new NotFoundException('Usuário não existe');
+    const { password, ...user } = await this.usersRepository.setFrozen(id, true);
+    return user;
+  }
+
+  async unfreeze(id: string): Promise<Omit<User, 'password'>> {
+    const userExist = await this.usersRepository.findById(id);
+    if (!userExist) throw new NotFoundException('Usuário não existe');
+    const { password, ...user } = await this.usersRepository.setFrozen(id, false);
+    return user;
   }
 
   async assignPlan(id: string, dto: AssignPlanDto): Promise<Omit<User, 'password'>> {

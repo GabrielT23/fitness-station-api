@@ -14,35 +14,49 @@ export class UsersRepository implements IUsersRepository {
   }
 
   async update(id: string, user: Partial<User>): Promise<User> {
+    const { plan, invoices, WorkoutSheetUsers, workoutSheets, assessmentSheets, token, company, ...safeData } = user as any;
     const userUpdate = await this.prisma.user.update({
       where: { id },
-      data: user,
+      data: safeData,
     });
     return userUpdate;
   }
 
   async findAll(): Promise<User[]> {
-    const users = this.prisma.user.findMany();
-    return users;
+    return this.prisma.user.findMany({
+      where: { deletedAt: null },
+      include: { plan: true },
+    });
   }
 
   async findById(id: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    return user;
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { plan: true },
+    });
   }
 
-  async findByUsername(
-    username: string,
-  ): Promise<User | null> {
-    const user = await this.prisma.user.findFirst({
-      where: {username},
+  async findByUsername(username: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { username },
     });
-    return user;
   }
 
   async deleteById(id: string): Promise<void> {
-    await this.prisma.user.delete({
+    await this.prisma.user.delete({ where: { id } });
+  }
+
+  async softDelete(id: string): Promise<User> {
+    return this.prisma.user.update({
       where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async setFrozen(id: string, isFrozen: boolean): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { isFrozen },
     });
   }
 

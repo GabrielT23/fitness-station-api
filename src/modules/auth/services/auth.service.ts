@@ -33,6 +33,12 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('usuario ou senha incorreta');
     }
+    if (user.deletedAt) {
+      throw new UnauthorizedException('Conta desativada');
+    }
+    if (user.isFrozen) {
+      throw new UnauthorizedException('Conta congelada. Entre em contato com a academia.');
+    }
     return user;
   }
 
@@ -72,6 +78,8 @@ export class AuthService {
     // Gera novo access token e refresh token
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
+    if (user.deletedAt) throw new UnauthorizedException('Conta desativada');
+    if (user.isFrozen) throw new UnauthorizedException('Conta congelada. Entre em contato com a academia.');
 
     const payload: PayLoadData = {
       id: user.id,
