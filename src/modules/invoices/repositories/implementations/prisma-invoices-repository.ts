@@ -31,9 +31,10 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async findByUserId(userId: string): Promise<Invoice[]> {
+  async findByUserId(userId: string): Promise<InvoiceWithPlan[]> {
     return this.prisma.invoice.findMany({
       where: { userId },
+      include: { plan: true },
       orderBy: { dueDate: 'desc' },
     });
   }
