@@ -25,8 +25,16 @@ export class UsersRepository implements IUsersRepository {
   async findAll(): Promise<User[]> {
     return this.prisma.user.findMany({
       where: { deletedAt: null },
-      include: { plan: true },
-    });
+      include: {
+        plan: true,
+        invoices: {
+          where: { status: { in: ['UNPAID', 'OVERDUE'] } },
+          orderBy: { dueDate: 'desc' },
+          take: 1,
+          include: { plan: true },
+        },
+      },
+    }) as any;
   }
 
   async findById(id: string): Promise<User | null> {
