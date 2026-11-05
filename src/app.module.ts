@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { configuration } from '@config/configuration';
 import { UsersModule } from '@modules/users';
@@ -18,6 +19,7 @@ import { InvoicesModule } from '@modules/invoices';
     ConfigModule.forRoot({
       load: [configuration],
     }),
+    ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
     PrismaModule,

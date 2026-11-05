@@ -85,6 +85,9 @@ export class InvoicesService {
 
     const usersWithPlans = await this.prisma.user.findMany({
       where: {
+        role: 'client',
+        isFrozen: false,
+        deletedAt: null,
         planId: { not: null },
         plan: { isExclusive: false, isActive: true },
       },
@@ -95,6 +98,12 @@ export class InvoicesService {
     let skipped = 0;
 
     for (const user of usersWithPlans) {
+      const totalInvoices = await this.prisma.invoice.count({ where: { userId: user.id } });
+      if (totalInvoices === 0) {
+        skipped++;
+        continue;
+      }
+
       const alreadyExists = await this.invoicesRepository.existsForUserInMonth(user.id, targetMonth);
       if (alreadyExists) {
         skipped++;
