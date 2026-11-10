@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { WorkoutSheet, WorkoutType } from '@prisma/client';
+import { PrismaService } from '@modules/prisma/prisma.service';
 import { CreateWorkoutSheetDto, UpdateWorkoutSheetDto } from '../dtos/workoutSheetDto';
 import { IWorkoutSheetsRepository } from '../repositories/IWorkoutSheets-repository';
 
 @Injectable()
 export class WorkoutSheetsService {
-  constructor(private readonly workoutSheetsRepository: IWorkoutSheetsRepository) {}
+  constructor(
+    private readonly workoutSheetsRepository: IWorkoutSheetsRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async create(createWorkoutSheetDto: CreateWorkoutSheetDto): Promise<WorkoutSheet> {
     const { name, type, isActive, companyId, users, workouts } = createWorkoutSheetDto;
@@ -34,9 +38,10 @@ export class WorkoutSheetsService {
 
         if (workout.exercises) {
           for (const exercise of workout.exercises) {
-            await this.workoutSheetsRepository.createExercise({
-              ...exercise,
-            }, createdWorkout.id);
+            await this.workoutSheetsRepository.createExercise(
+              { ...exercise },
+              createdWorkout.id,
+            );
           }
         }
       }
@@ -64,8 +69,13 @@ export class WorkoutSheetsService {
     return this.workoutSheetsRepository.findAllWorkoutSheets();
   }
 
-  async findAllByUserId(userId: string): Promise<WorkoutSheet[]> {
-    return this.workoutSheetsRepository.findAllWorkoutSheetsByUserId(userId);
+  async findAllByUserId(userId: string): Promise<any[]> {
+    const [sheets, user] = await Promise.all([
+      this.workoutSheetsRepository.findAllWorkoutSheetsByUserId(userId),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkoutSheetId: true } }),
+    ]);
+    const activeId = user?.activeWorkoutSheetId ?? null;
+    return sheets.map((s) => ({ ...s, isActive: s.id === activeId }));
   }
 
   async findOne(id: string): Promise<WorkoutSheet> {
@@ -80,6 +90,27 @@ export class WorkoutSheetsService {
 
   async unLinkUserToWorkoutSheet(userId: string, workoutSheetId: string): Promise<void> {
     await this.workoutSheetsRepository.unLinkUserToWorkoutSheet(userId, workoutSheetId);
+    // Clear active sheet if the unlinked sheet was the user's active one
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeWorkoutSheetId: true },
+    });
+    if (user?.activeWorkoutSheetId === workoutSheetId) {
+      await this.prisma.user.update({ where: { id: userId }, data: { activeWorkoutSheetId: null } });
+    }
+  }
+
+  async setActiveSheetForUser(userId: string, workoutSheetId: string | null): Promise<void> {
+    if (workoutSheetId) {
+      const link = await this.prisma.workoutSheetUsers.findUnique({
+        where: { userId_workoutSheetId: { userId, workoutSheetId } },
+      });
+      if (!link) throw new NotFoundException('Ficha não vinculada a este usuário');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { activeWorkoutSheetId: workoutSheetId },
+    });
   }
 
   async remove(id: string): Promise<void> {

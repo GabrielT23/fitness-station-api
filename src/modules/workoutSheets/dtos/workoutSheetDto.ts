@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsBoolean, ValidateNested, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsOptional, IsBoolean, ValidateNested, IsArray, Allow } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExerciseDto {
@@ -102,4 +102,20 @@ export class UpdateWorkoutSheetDto {
   @IsUUID()
   @IsOptional()
   companyId?: string;
+}
+
+export class SetActiveSheetDto {
+  @IsUUID()
+  @IsOptional()
+  workoutSheetId?: string;
+}
+
+export class AdminSetActiveSheetDto {
+  @IsUUID()
+  @IsNotEmpty()
+  userId: string;
+
+  @IsUUID()
+  @IsOptional()
+  workoutSheetId?: string;
 }

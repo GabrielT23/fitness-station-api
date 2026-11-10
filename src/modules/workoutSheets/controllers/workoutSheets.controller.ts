@@ -1,6 +1,9 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req, Patch } from '@nestjs/common';
 import { WorkoutSheetsService } from '../services/workoutSheets.service';
-import { CreateWorkoutSheetDto, LinkWorkoutSheetToUserDto, UpdateWorkoutSheetDto } from '../dtos/workoutSheetDto';
+import {
+  CreateWorkoutSheetDto, LinkWorkoutSheetToUserDto, UpdateWorkoutSheetDto,
+  SetActiveSheetDto, AdminSetActiveSheetDto,
+} from '../dtos/workoutSheetDto';
 import { AuthGuard } from '@modules/auth/providers/auth.guard';
 import { RoleUser } from '@modules/auth/role.decorator';
 
@@ -10,7 +13,7 @@ import { RoleUser } from '@modules/auth/role.decorator';
 export class WorkoutSheetsController {
   constructor(private readonly workoutSheetsService: WorkoutSheetsService) {}
 
-  
+
   @UseGuards(AuthGuard)
   @RoleUser('admin')
   @Post()
@@ -53,9 +56,26 @@ export class WorkoutSheetsController {
   @UseGuards(AuthGuard)
   @RoleUser('client')
   @Get('/client')
-  async findAllByUserId(@Req () req) {
+  async findAllByUserId(@Req() req) {
     const userId = req.user.id as string;
     return await this.workoutSheetsService.findAllByUserId(userId);
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('client')
+  @Patch('/client/set-active')
+  async setMyActiveSheet(@Req() req, @Body() dto: SetActiveSheetDto) {
+    const userId = req.user.id as string;
+    await this.workoutSheetsService.setActiveSheetForUser(userId, dto.workoutSheetId ?? null);
+    return { message: 'Ficha ativa atualizada' };
+  }
+
+  @UseGuards(AuthGuard)
+  @RoleUser('admin')
+  @Patch('/set-active-for-user')
+  async setActiveForUser(@Body() dto: AdminSetActiveSheetDto) {
+    await this.workoutSheetsService.setActiveSheetForUser(dto.userId, dto.workoutSheetId ?? null);
+    return { message: 'Ficha ativa atualizada' };
   }
 
   @Get(':id')

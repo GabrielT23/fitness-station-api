@@ -20,7 +20,13 @@ describe('AuthService', () => {
     password: 'hashedpassword',
     role: Role.admin,
     companyId: '1',
+    planId: null,
+    cpf: null,
+    email: null,
     lastPayment: null,
+    isFrozen: false,
+    deletedAt: null,
+    activeWorkoutSheetId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

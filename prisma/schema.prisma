@@ -65,27 +65,29 @@ model Invoice {
 }
 
 model User {
-  id              String          @id @default(uuid())
-  name            String
-  username        String          @unique
-  password        String
-  role            Role            @default(client)
-  cpf             String?
-  email           String?
-  lastPayment     DateTime?
-  planId          String?
-  isFrozen        Boolean         @default(false)
-  deletedAt       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  company         Company         @relation(fields: [companyId], references: [id])
-  companyId       String
-  plan            Plan?           @relation(fields: [planId], references: [id])
-  token           Token?          @relation("UserToken")
-  workoutSheets   WorkoutSheet[]  @relation("WorkoutSheetUsers")
-  WorkoutSheetUsers WorkoutSheetUsers[]
-  assessmentSheets  AssessmentSheet[]
-  invoices        Invoice[]
+  id                    String          @id @default(uuid())
+  name                  String
+  username              String          @unique
+  password              String
+  role                  Role            @default(client)
+  cpf                   String?
+  email                 String?
+  lastPayment           DateTime?
+  planId                String?
+  isFrozen              Boolean         @default(false)
+  deletedAt             DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  company               Company         @relation(fields: [companyId], references: [id])
+  companyId             String
+  plan                  Plan?           @relation(fields: [planId], references: [id])
+  token                 Token?          @relation("UserToken")
+  workoutSheets         WorkoutSheet[]  @relation("WorkoutSheetUsers")
+  WorkoutSheetUsers     WorkoutSheetUsers[]
+  assessmentSheets      AssessmentSheet[]
+  invoices              Invoice[]
+  activeWorkoutSheetId  String?
+  activeWorkoutSheet    WorkoutSheet?   @relation("UserActiveSheet", fields: [activeWorkoutSheetId], references: [id], onDelete: SetNull)
   @@map("users")
 }
 
@@ -111,16 +113,17 @@ model Company {
 }
 
 model WorkoutSheet {
-  id          String          @id @default(uuid())
-  name        String
-  type        WorkoutType     @default(default)
-  isActive    Boolean         @default(false)
-  users       User[]          @relation("WorkoutSheetUsers")
-  company     Company         @relation(fields: [companyId], references: [id])
-  companyId   String
-  workouts    Workout[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(uuid())
+  name            String
+  type            WorkoutType     @default(default)
+  isActive        Boolean         @default(false)
+  users           User[]          @relation("WorkoutSheetUsers")
+  activeForUsers  User[]          @relation("UserActiveSheet")
+  company         Company         @relation(fields: [companyId], references: [id])
+  companyId       String
+  workouts        Workout[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   @@map("workout_sheets")
   WorkoutSheetUsers WorkoutSheetUsers[]
 }
