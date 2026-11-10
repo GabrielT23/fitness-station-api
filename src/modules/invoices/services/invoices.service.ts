@@ -60,29 +60,37 @@ export class InvoicesService {
       return { created: false, message: 'Plano inativo não gera faturas' };
     }
 
-    const targetMonth = month ?? this.currentMonth();
-    const alreadyExists = await this.invoicesRepository.existsForUserInMonth(userId, targetMonth);
-    if (alreadyExists) {
-      return { created: false, message: `Fatura de ${targetMonth} já existe` };
+    // Allow generation only if this is the first invoice or the last one is older than 1 month
+    const lastInvoice = await this.prisma.invoice.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastInvoice) {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      if (new Date(lastInvoice.createdAt) > oneMonthAgo) {
+        return { created: false, message: 'Já existe uma fatura gerada há menos de 1 mês' };
+      }
     }
 
-    const [year, mon] = targetMonth.split('-').map(Number);
-    const dueDate = new Date(year, mon - 1, 5);
+    const referenceMonth = month ?? this.currentMonth();
+    const now = new Date();
+    // dueDate = tomorrow at noon UTC (timezone-safe)
+    const dueDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 12, 0, 0));
 
     await this.invoicesRepository.create({
       userId: user.id,
       planId: user.planId!,
       amount: user.plan.value,
       dueDate,
-      referenceMonth: targetMonth,
+      referenceMonth,
     });
 
-    return { created: true, message: `Fatura de ${targetMonth} gerada com sucesso` };
+    return { created: true, message: `Fatura de ${referenceMonth} gerada com sucesso` };
   }
 
   async generateMonthly(dto: GenerateMonthlyInvoicesDto): Promise<{ created: number; skipped: number }> {
-    const targetMonth = dto.month ?? this.currentMonth();
-
     const usersWithPlans = await this.prisma.user.findMany({
       where: {
         role: 'client',
@@ -97,28 +105,29 @@ export class InvoicesService {
     let created = 0;
     let skipped = 0;
 
+    const now = new Date();
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const dueDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 12, 0, 0));
+    const referenceMonth = this.currentMonth();
+
     for (const user of usersWithPlans) {
-      const totalInvoices = await this.prisma.invoice.count({ where: { userId: user.id } });
-      if (totalInvoices === 0) {
+      const lastInvoice = await this.prisma.invoice.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (lastInvoice && new Date(lastInvoice.createdAt) > oneMonthAgo) {
         skipped++;
         continue;
       }
-
-      const alreadyExists = await this.invoicesRepository.existsForUserInMonth(user.id, targetMonth);
-      if (alreadyExists) {
-        skipped++;
-        continue;
-      }
-
-      const [year, month] = targetMonth.split('-').map(Number);
-      const dueDate = new Date(year, month - 1, 5);
 
       await this.invoicesRepository.create({
         userId: user.id,
         planId: user.planId!,
         amount: user.plan!.value,
         dueDate,
-        referenceMonth: targetMonth,
+        referenceMonth,
       });
       created++;
     }
@@ -129,12 +138,15 @@ export class InvoicesService {
   async markOverdue(): Promise<{ updated: number }> {
     const unpaid = await this.invoicesRepository.findUnpaidWithPlan();
     const now = new Date();
+    // Strip time — compare calendar dates only in UTC to avoid midnight-job false negatives
+    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
     const overdueIds = unpaid
       .filter((invoice) => {
-        const deadline = new Date(invoice.dueDate);
-        deadline.setDate(deadline.getDate() + invoice.plan.toleranceDays);
-        return now > deadline;
+        const d = new Date(invoice.dueDate);
+        // deadline = dueDate + toleranceDays; overdue when today >= deadline
+        const deadlineUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + invoice.plan.toleranceDays);
+        return todayUTC >= deadlineUTC;
       })
       .map((invoice) => invoice.id);
 
