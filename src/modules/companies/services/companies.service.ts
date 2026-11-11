@@ -14,25 +14,36 @@ export class CompaniesService {
     return await this.companiesRepository.create(createCompanyDto);
   }
 
-  async findAll(): Promise<Company[]> {
-    return await this.companiesRepository.findAll();
+  /** Returns only the caller's own company, as a one-item array. */
+  async findAll(companyId: string): Promise<Company[]> {
+    const company = await this.companiesRepository.findById(companyId);
+    return company ? [company] : [];
   }
 
-  async findOne(id: string): Promise<Company> {
+  async findOne(id: string, companyId: string): Promise<Company> {
+    this.assertOwnCompany(id, companyId);
     const company = await this.companiesRepository.findById(id);
     if (!company) throw new NotFoundException('Empresa não encontrada');
     return company;
   }
 
-  async update(id: string, updateCompanyDto: UpdateCompanyDto): Promise<Company> {
+  async update(id: string, companyId: string, updateCompanyDto: UpdateCompanyDto): Promise<Company> {
+    this.assertOwnCompany(id, companyId);
     const company = await this.companiesRepository.findById(id);
     if (!company) throw new NotFoundException('Empresa não encontrada');
-    return await this.companiesRepository.update(id, updateCompanyDto);
+    // Only the name is writable: the body's `id` must never reach Prisma.
+    return await this.companiesRepository.update(id, { name: updateCompanyDto.name });
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, companyId: string): Promise<void> {
+    this.assertOwnCompany(id, companyId);
     const company = await this.companiesRepository.findById(id);
     if (!company) throw new NotFoundException('Empresa não encontrada');
     await this.companiesRepository.deleteById(id);
+  }
+
+  /** Other companies are reported as not found, not forbidden, so ids are not probed. */
+  private assertOwnCompany(id: string, companyId: string): void {
+    if (id !== companyId) throw new NotFoundException('Empresa não encontrada');
   }
 }
