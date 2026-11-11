@@ -1,8 +1,10 @@
 import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { AuthGuard } from '@modules/auth/providers/auth.guard';
-import type { AuthUser } from '@modules/auth/providers/auth.guard';
 import { PaymentsService } from '../services/payments.service';
 import { CreatePixDto } from '../dtos/payments.dto';
+
+type AuthenticatedRequest = Request & { user: { id: string } };
 
 @Controller('/payments')
 export class PaymentsController {
@@ -11,7 +13,7 @@ export class PaymentsController {
   @Post('pix/:invoiceId')
   @UseGuards(AuthGuard)
   async createPix(
-    @Req() req: { user: AuthUser },
+    @Req() req: AuthenticatedRequest,
     @Param('invoiceId') invoiceId: string,
     @Body() dto: CreatePixDto,
   ) {
@@ -20,8 +22,10 @@ export class PaymentsController {
 
   // Sem guard — validado pelo x-signature do Mercado Pago
   @Post('webhook')
-  /** Matches the shape PaymentsService.handleWebhook reads: the raw body and string headers. */
-  async handleWebhook(@Req() req: { body: Record<string, unknown>; headers: Record<string, string> }) {
-    return this.paymentsService.handleWebhook(req.body, req.headers);
+  async handleWebhook(@Req() req: Request) {
+    return this.paymentsService.handleWebhook(
+      req.body,
+      req.headers as Record<string, string | undefined>,
+    );
   }
 }

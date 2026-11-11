@@ -5,11 +5,17 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
 import * as crypto from 'crypto';
 import { PrismaService } from '@modules/prisma/prisma.service';
 import { PaymentsGateway } from '../gateways/payments.gateway';
+import { PixPaymentStatus, PixProvider } from '../gateways/pix-provider';
 import { CreatePixDto } from '../dtos/payments.dto';
+
+/** The parts of a Mercado Pago notification this service reads. */
+export interface WebhookBody {
+  type?: string;
+  data?: { id?: string | number };
+}
 
 @Injectable()
 export class PaymentsService {
@@ -18,6 +24,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentsGateway: PaymentsGateway,
+    private readonly pix: PixProvider,
   ) {}
 
   async createPixPayment(invoiceId: string, userId: string, dto: CreatePixDto) {
@@ -31,46 +38,36 @@ export class PaymentsService {
     if (invoice.status === 'PAID') throw new BadRequestException('Fatura já foi paga');
     if (invoice.status === 'CANCELLED') throw new BadRequestException('Fatura cancelada');
 
-    const client = new MercadoPagoConfig({
-      accessToken: process.env.MP_ACCESS_TOKEN!,
-    });
-    const paymentApi = new Payment(client);
-
     const nameParts = (invoice.user?.name ?? 'Aluno').split(' ');
     const cleanCpf = dto.cpf.replace(/\D/g, '');
 
-    const result = await paymentApi.create({
-      body: {
-        transaction_amount: invoice.amount,
-        description: `Academia - Fatura ${invoice.referenceMonth}`,
-        payment_method_id: 'pix',
-        payer: {
-          email: dto.email,
-          first_name: nameParts[0],
-          last_name: nameParts.slice(1).join(' ') || nameParts[0],
-          identification: { type: 'CPF', number: cleanCpf },
-        },
+    const charge = await this.pix.createPixPayment({
+      idempotencyKey: invoiceId,
+      amount: invoice.amount,
+      description: `Academia - Fatura ${invoice.referenceMonth}`,
+      payer: {
+        email: dto.email,
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(' ') || nameParts[0],
+        cpf: cleanCpf,
       },
-      requestOptions: { idempotencyKey: invoiceId },
     });
 
     await this.prisma.invoice.update({
       where: { id: invoiceId },
-      data: { mpPaymentId: String(result.id) },
+      data: { mpPaymentId: String(charge.id) },
     });
 
-    const txData = (result as any).point_of_interaction?.transaction_data;
-
     return {
-      paymentId: result.id,
-      qrCode: txData?.qr_code ?? null,
-      qrCodeBase64: txData?.qr_code_base64 ?? null,
-      ticketUrl: txData?.ticket_url ?? null,
-      expiresAt: (result as any).date_of_expiration ?? null,
+      paymentId: charge.id,
+      qrCode: charge.qrCode,
+      qrCodeBase64: charge.qrCodeBase64,
+      ticketUrl: charge.ticketUrl,
+      expiresAt: charge.expiresAt,
     };
   }
 
-  async handleWebhook(body: Record<string, any>, headers: Record<string, string>) {
+  async handleWebhook(body: WebhookBody, headers: Record<string, string | undefined>) {
     this.logger.log(`[webhook] recebido | type=${body.type} | data.id=${body.data?.id}`);
     this.logger.debug(`[webhook] headers x-signature=${headers['x-signature'] ?? 'ausente'}`);
 
@@ -94,15 +91,14 @@ export class PaymentsService {
     }
 
     this.logger.log(`[webhook] buscando pagamento MP id=${paymentId}...`);
-    const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
-    const paymentApi = new Payment(client);
 
-    let mpPayment: any;
+    let mpPayment: PixPaymentStatus | undefined;
     try {
-      mpPayment = await paymentApi.get({ id: paymentId });
-      this.logger.log(`[webhook] pagamento MP obtido | status=${mpPayment?.status} | status_detail=${mpPayment?.status_detail}`);
-    } catch (err: any) {
-      this.logger.warn(`[webhook] falha ao buscar pagamento MP ${paymentId}: ${err.message}`);
+      mpPayment = await this.pix.getPayment(paymentId);
+      this.logger.log(`[webhook] pagamento MP obtido | status=${mpPayment?.status} | status_detail=${mpPayment?.statusDetail}`);
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`[webhook] falha ao buscar pagamento MP ${paymentId}: ${reason}`);
       return { ok: true };
     }
 
@@ -137,7 +133,7 @@ export class PaymentsService {
     return { ok: true };
   }
 
-  private validateSignature(body: Record<string, any>, headers: Record<string, string>) {
+  private validateSignature(body: WebhookBody, headers: Record<string, string | undefined>) {
     const xSignature = headers['x-signature'];
     const xRequestId = headers['x-request-id'];
     if (!xSignature) return;
