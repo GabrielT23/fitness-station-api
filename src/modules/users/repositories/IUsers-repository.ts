@@ -5,10 +5,12 @@ import { CreateUserDto } from '../dtos/userDTO';
 export type SafeUser = Omit<User, 'password'>;
 
 export abstract class IUsersRepository {
-  abstract create(user: Omit<CreateUserDto, 'address'>): Promise<SafeUser>;
+  abstract create(user: CreateUserDto & { companyId: string }): Promise<SafeUser>;
   abstract update(id: string, user: Partial<User>): Promise<SafeUser>;
-  abstract findAll(): Promise<SafeUser[]>;
-  abstract findById(id: string): Promise<SafeUser | null>;
+  /** Lists the users of one company (soft-deleted users are left out). */
+  abstract findAllByCompany(companyId: string): Promise<SafeUser[]>;
+  /** When `companyId` is given, the user is only found if it belongs to that company. */
+  abstract findById(id: string, companyId?: string): Promise<SafeUser | null>;
   abstract findByUsername(username: string): Promise<SafeUser | null>;
   /** Includes the password hash. Use only to verify credentials. */
   abstract findByUsernameWithPassword(username: string): Promise<User | null>;
