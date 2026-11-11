@@ -1,5 +1,4 @@
-// filepath: d:\documentos\projetos\pessoais\fitness-station\fitness-station-api\src\modules\companies\dtos\companyDTO.ts
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 export class CreateCompanyDto {
   @IsString({ message: 'Nome inválido' })
@@ -7,8 +6,5 @@ export class CreateCompanyDto {
   name: string;
 }
 
-export class UpdateCompanyDto extends CreateCompanyDto {
-  @IsUUID()
-  @IsNotEmpty({ message: 'ID é obrigatório' })
-  id: string;
-}
+/** Only the name is editable; the id comes from the route. */
+export class UpdateCompanyDto extends CreateCompanyDto {}

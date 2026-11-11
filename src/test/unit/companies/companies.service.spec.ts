@@ -103,7 +103,7 @@ describe('CompaniesService', () => {
       repository.findById.mockResolvedValue(mockCompany);
       repository.update.mockResolvedValue(updatedCompany);
 
-      const result = await service.update(OWN_ID, OWN_ID, { name: 'Updated Company', id: OWN_ID });
+      const result = await service.update(OWN_ID, OWN_ID, { name: 'Updated Company' });
 
       expect(repository.findById).toHaveBeenCalledWith(OWN_ID);
       expect(repository.update).toHaveBeenCalledWith(OWN_ID, { name: 'Updated Company' });
@@ -112,7 +112,7 @@ describe('CompaniesService', () => {
 
     it('should throw NotFoundException for another company without touching the repository', async () => {
       await expect(
-        service.update(OTHER_ID, OWN_ID, { name: 'Hijack', id: OTHER_ID }),
+        service.update(OTHER_ID, OWN_ID, { name: 'Hijack' }),
       ).rejects.toThrow(NotFoundException);
       expect(repository.findById).not.toHaveBeenCalled();
       expect(repository.update).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('CompaniesService', () => {
     it('should throw NotFoundException if the own company is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update(OWN_ID, OWN_ID, { name: 'Test', id: OWN_ID })).rejects.toThrow(
+      await expect(service.update(OWN_ID, OWN_ID, { name: 'Test' })).rejects.toThrow(
         NotFoundException,
       );
       expect(repository.update).not.toHaveBeenCalled();
