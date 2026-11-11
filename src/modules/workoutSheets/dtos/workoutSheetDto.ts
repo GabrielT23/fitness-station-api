@@ -69,9 +69,10 @@ export class CreateWorkoutSheetDto {
   @IsNotEmpty()
   isActive: boolean;
 
+  /** Accepted for compatibility but ignored: the company always comes from the authenticated user. */
   @IsUUID()
-  @IsNotEmpty()
-  companyId: string;
+  @IsOptional()
+  companyId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -99,6 +100,7 @@ export class UpdateWorkoutSheetDto {
   @IsOptional()
   isActive?: boolean;
 
+  /** Accepted for compatibility but ignored: a sheet cannot be moved to another company. */
   @IsUUID()
   @IsOptional()
   companyId?: string;
