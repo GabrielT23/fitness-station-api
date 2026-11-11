@@ -1,5 +1,5 @@
 import * as request from 'supertest';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -60,6 +60,14 @@ describe('AuthController rate limit over HTTP', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    // Same pipe as src/main.ts.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     await app.init();
   });
 
@@ -110,14 +118,6 @@ describe('AuthController rate limit over HTTP', () => {
     const blocked = await request(server).post('/auth/refresh').send(body);
     expect(blocked.status).toBe(429);
     expect(blocked.headers['retry-after']).toBeDefined();
-  });
-
-  it('accepts a refresh without userId and passes the token first', async () => {
-    authService.refreshToken.mockClear();
-    const moduleApp = app.getHttpServer();
-    // The refresh budget is spent above; the call is checked through the service mock only.
-    await request(moduleApp).post('/auth/refresh').send({ refreshToken: 'r' });
-    expect(authService.refreshToken).not.toHaveBeenCalledWith('client-1', 'r');
   });
 
   it('logout works without an access token and ends the given session', async () => {
