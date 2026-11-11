@@ -6,8 +6,9 @@ import { compare } from 'bcryptjs';
 import { PayLoadData } from '../dtos/authDTO';
 import { configuration } from '@config/configuration';
 
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { ITokenRepository } from '../repositories/ITokens-repository';
+import { ACCESS_TOKEN_TTL } from '@config/jwt';
 
 const config = configuration();
 
@@ -48,10 +49,9 @@ export class AuthService {
   }
 
   async login(payload: PayLoadData) {
-    // Gera access token (1 dia)
     const accessToken = this.jwtService.sign(payload, {
       secret: config.jwtSecret,
-      expiresIn: '1m',
+      expiresIn: ACCESS_TOKEN_TTL,
     });
 
     // Gera refresh token (string aleatória)
@@ -73,7 +73,7 @@ export class AuthService {
 
   async refreshToken(userId: string, refreshToken: string) {
     const tokenData = await this.tokenRepository.findbyUserId(userId);
-    if (!tokenData || tokenData.refreshToken !== refreshToken) {
+    if (!tokenData || !this.refreshTokenMatches(tokenData.refreshToken, refreshToken)) {
       throw new UnauthorizedException('Refresh token inválido');
     }
     if (new Date(tokenData.expiresAt) < new Date()) {
@@ -95,7 +95,7 @@ export class AuthService {
 
     const newAccessToken = this.jwtService.sign(payload, {
       secret: config.jwtSecret,
-      expiresIn: '1d',
+      expiresIn: ACCESS_TOKEN_TTL,
     });
     const newRefreshToken = randomBytes(32).toString('hex');
     const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -110,6 +110,18 @@ export class AuthService {
       access_token: newAccessToken,
       refresh_token: newRefreshToken,
     };
+  }
+
+  /** Revokes the user's refresh token. Access tokens expire on their own (ACCESS_TOKEN_TTL). */
+  async logout(userId: string): Promise<void> {
+    await this.tokenRepository.deleteByUserId(userId);
+  }
+
+  /** Constant-time comparison of a stored and a provided refresh token. */
+  private refreshTokenMatches(stored: string, provided: string): boolean {
+    const storedBuffer = Buffer.from(stored, 'utf8');
+    const providedBuffer = Buffer.from(provided, 'utf8');
+    return storedBuffer.length === providedBuffer.length && timingSafeEqual(storedBuffer, providedBuffer);
   }
 
   decodeToken(token: string): PayLoadData {
