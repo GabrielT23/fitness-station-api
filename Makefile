@@ -1,7 +1,7 @@
 # Fitness Station API — main commands. `make` with no target lists the commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev build lint format format-check typecheck test coverage docs openapi check
+.PHONY: help install dev build lint format format-check typecheck test coverage docs openapi openapi-check check
 
 help: ## List the available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -36,13 +36,16 @@ typecheck: ## TypeScript compiler without emitting files
 test: ## Jest unit tests
 	npx jest
 
-coverage: ## Jest with coverage report (coverage/)
+coverage: ## Jest with coverage; fails below the 60% floor in jest.config.js
 	npx jest --coverage
 
 docs: ## Check docs/system against the code (tools/docs_coverage.py)
 	python3 tools/docs_coverage.py
 
-openapi: ## Generate the OpenAPI document (needs an `openapi` npm script, not yet in package.json)
+openapi: ## Regenerate openapi.json from the controllers and DTOs (no database needed)
 	npm run openapi
 
-check: format-check lint typecheck docs ## Everything that must pass before a commit
+openapi-check: openapi ## Fail if the committed openapi.json is out of date
+	git diff --exit-code -- openapi.json
+
+check: format-check lint typecheck docs openapi-check ## Everything that must pass before a commit (CI job `check`)
