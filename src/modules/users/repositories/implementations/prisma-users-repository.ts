@@ -9,7 +9,7 @@ import { PrismaService } from '@modules/prisma/prisma.service';
 export class UsersRepository implements IUsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(user: CreateUserDto): Promise<SafeUser> {
+  async create(user: CreateUserDto & { companyId: string }): Promise<SafeUser> {
     const newUser = await this.prisma.user.create({ data: user });
     return newUser;
   }
@@ -23,9 +23,9 @@ export class UsersRepository implements IUsersRepository {
     return userUpdate;
   }
 
-  async findAll(): Promise<SafeUser[]> {
+  async findAllByCompany(companyId: string): Promise<SafeUser[]> {
     return this.prisma.user.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, companyId },
       include: {
         plan: true,
         invoices: {
@@ -38,9 +38,9 @@ export class UsersRepository implements IUsersRepository {
     }) as any;
   }
 
-  async findById(id: string): Promise<SafeUser | null> {
-    return this.prisma.user.findUnique({
-      where: { id },
+  async findById(id: string, companyId?: string): Promise<SafeUser | null> {
+    return this.prisma.user.findFirst({
+      where: { id, ...(companyId ? { companyId } : {}) },
       include: { plan: true },
     });
   }

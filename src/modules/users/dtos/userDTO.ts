@@ -19,14 +19,9 @@ export class CreateUserDto {
   @IsEnum(Role)
   @IsOptional()
   role: Role;
-
-  @IsString({ message: 'CompanyId inválido' })
-  @IsNotEmpty({ message: 'CompanyId é obrigatório' })
-  @IsUUID()
-  companyId: string
-
 }
 
+/** `companyId` is never read from the body: it always comes from the authenticated admin. */
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
 
 export class AssignPlanDto {
