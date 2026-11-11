@@ -16,6 +16,11 @@ interface CheckRoleOptions {
   roleName: Role;
 }
 
+interface AuthorizeOptions {
+  userId: string;
+  requiredRole?: Role;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -25,7 +30,7 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, passwordUser: string): Promise<User> {
-    const user = await this.usersRepository.findByUsername(username);
+    const user = await this.usersRepository.findByUsernameWithPassword(username);
     if (!user) {
       throw new UnauthorizedException('usuario ou senha incorreta');
     }
@@ -114,6 +119,27 @@ export class AuthService {
       username: payload.username,
       role: payload.role,
       companyId: payload.companyId,
+    };
+  }
+
+  /**
+   * Loads the token's user from the database and checks it may access the
+   * route: it must exist, be active, and hold `requiredRole` (admins may
+   * access client routes). Returns the request user built from the database.
+   */
+  async authorize(options: AuthorizeOptions) {
+    const user = await this.usersRepository.findById(options.userId);
+    if (!user || user.deletedAt || user.isFrozen) {
+      throw new UnauthorizedException('Não autorizado');
+    }
+    if (options.requiredRole && options.requiredRole !== user.role && user.role !== 'admin') {
+      throw new UnauthorizedException('Não autorizado');
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      companyId: user.companyId,
     };
   }
 

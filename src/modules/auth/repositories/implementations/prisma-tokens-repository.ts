@@ -12,6 +12,10 @@ export class TokenRepository implements ITokenRepository {
     return await this.prisma.token.findFirst({ where: { userId } });
   }
 
+  async deleteByUserId(userId: string): Promise<void> {
+    await this.prisma.token.deleteMany({ where: { userId } });
+  }
+
   async save(data: { userId: string; refreshToken: string; expiresAt: Date }): Promise<void> {
     await this.prisma.token.upsert({
       where: { userId: data.userId },
