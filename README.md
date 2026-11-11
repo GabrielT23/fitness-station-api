@@ -85,7 +85,7 @@ process with exit code 1) unless noted.
 | `PORT` | no, default `3000` | port the HTTP server listens on (Cloud Run sets it to `8080`) |
 | `DATABASE_URL` | yes | PostgreSQL connection string (Prisma) |
 | `JWT_SECRET` | yes | signs access tokens; verifies the Socket.IO connection |
-| `HASH_SECRET` | yes | validated at startup, read by no code |
+| `HASH_SECRET` | yes | key of the refresh-token rotation HMAC (keep it stable) |
 | `MP_ACCESS_TOKEN` | for PIX | Mercado Pago access token; read directly from `process.env`, not validated |
 | `MP_WEBHOOK_SECRET` | no | enables the Mercado Pago webhook signature check; read directly from `process.env` |
 

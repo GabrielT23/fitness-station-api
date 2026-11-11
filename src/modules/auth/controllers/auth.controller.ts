@@ -1,26 +1,19 @@
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
-import { AuthBody, RefreshBody } from '../dtos/authDTO';
-import { AuthGuard, AuthUser } from '../providers/auth.guard';
+import { AuthBody, LogoutBody, RefreshBody } from '../dtos/authDTO';
 
-/** Strict per-IP limit for credential and refresh endpoints. */
-const STRICT_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
+/** Login: per IP + username (see AppThrottlerGuard), so a shared gym Wi-Fi is not locked out. */
+const LOGIN_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
+/** Refresh: per IP; several tabs and devices may refresh at once. */
+const REFRESH_THROTTLE = { default: { limit: 30, ttl: 60_000 } };
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  @Throttle(STRICT_THROTTLE)
+  @Throttle(LOGIN_THROTTLE)
   async login(@Body() body: AuthBody) {
     const { username, password } = body;
     const user = await this.authService.validateUser(username, password);
@@ -39,17 +32,19 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @Throttle(STRICT_THROTTLE)
+  @Throttle(REFRESH_THROTTLE)
   async refresh(@Body() body: RefreshBody) {
-    const { userId, refreshToken } = body;
-    const tokens = await this.authService.refreshToken(userId, refreshToken);
-    return tokens;
+    return this.authService.refreshToken(body.refreshToken, body.userId);
   }
 
+  /**
+   * Ends this device's session. Holding the refresh token is the proof, so it
+   * works even when the access token has already expired.
+   */
   @Post('logout')
-  @UseGuards(AuthGuard)
+  @Throttle(REFRESH_THROTTLE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Req() req: { user: AuthUser }): Promise<void> {
-    await this.authService.logout(req.user.id);
+  async logout(@Body() body: LogoutBody): Promise<void> {
+    await this.authService.logoutSession(body.refreshToken);
   }
 }

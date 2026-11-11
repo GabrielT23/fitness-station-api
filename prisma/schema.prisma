@@ -81,7 +81,7 @@ model User {
   company               Company         @relation(fields: [companyId], references: [id])
   companyId             String
   plan                  Plan?           @relation(fields: [planId], references: [id])
-  token                 Token?          @relation("UserToken")
+  tokens                Token[]         @relation("UserToken")
   workoutSheets         WorkoutSheet[]  @relation("WorkoutSheetUsers")
   WorkoutSheetUsers     WorkoutSheetUsers[]
   assessmentSheets      AssessmentSheet[]
@@ -93,12 +93,17 @@ model User {
 
 model Token {
   id            String   @id @default(uuid())
+  /// SHA-256 (hex) of the refresh token; the plain token is never stored.
   refreshToken  String   @unique
-  expiresAt     DateTime // Data de expiração do refresh token (7 dias)
+  /// Sliding expiry: pushed forward on every refresh.
+  expiresAt     DateTime
+  lastUsedAt    DateTime @default(now())
   user          User     @relation("UserToken", fields: [userId], references: [id], onDelete: Cascade)
-  userId        String   @unique
+  /// One row per signed-in device: a user may have several sessions.
+  userId        String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  @@index([userId])
   @@map("token")
 }
 

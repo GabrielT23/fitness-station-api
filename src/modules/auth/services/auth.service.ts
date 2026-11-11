@@ -6,9 +6,15 @@ import { compare } from 'bcryptjs';
 import { PayLoadData } from '../dtos/authDTO';
 import { configuration } from '@config/configuration';
 
-import { randomBytes, timingSafeEqual } from 'crypto';
 import { ITokenRepository } from '../repositories/ITokens-repository';
 import { ACCESS_TOKEN_TTL } from '@config/jwt';
+import {
+  MAX_SESSIONS_PER_USER,
+  hashRefreshToken,
+  newRefreshToken,
+  refreshExpiry,
+  successorRefreshToken,
+} from './refresh-token';
 
 const config = configuration();
 
@@ -52,42 +58,48 @@ export class AuthService {
   }
 
   async login(payload: PayLoadData) {
-    const accessToken = this.jwtService.sign(payload, {
-      secret: config.jwtSecret,
-      expiresIn: ACCESS_TOKEN_TTL,
-    });
-
-    // Gera refresh token (string aleatória)
-    const refreshToken = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dias
-
-    // Salva ou atualiza refresh token no banco
-    await this.tokenRepository.save({
+    const refreshToken = newRefreshToken();
+    // A new device gets its own session; other devices stay signed in.
+    await this.tokenRepository.create({
       userId: payload.id,
-      refreshToken,
-      expiresAt,
+      tokenHash: hashRefreshToken(refreshToken),
+      expiresAt: refreshExpiry(),
     });
-
+    await this.tokenRepository.prune(payload.id, MAX_SESSIONS_PER_USER);
     return {
-      access_token: accessToken,
+      access_token: this.signAccessToken(payload),
       refresh_token: refreshToken,
     };
   }
 
-  async refreshToken(userId: string, refreshToken: string) {
-    const tokenData = await this.tokenRepository.findbyUserId(userId);
-    if (
-      !tokenData ||
-      !this.refreshTokenMatches(tokenData.refreshToken, refreshToken)
-    ) {
+  /**
+   * Exchanges a refresh token for a new access token and the token's
+   * successor. Accepts the current token (and rotates it) or the one just
+   * before it (a concurrent or retried refresh: answers with the same
+   * successor, no rotation), so parallel refreshes never sign the user out.
+   * `userId` is optional and, when sent, must match the session.
+   */
+  async refreshToken(refreshToken: string, userId?: string) {
+    const secret = config.hashSecret;
+    const successor = successorRefreshToken(refreshToken, secret);
+    let session = await this.tokenRepository.findByHash(
+      hashRefreshToken(refreshToken),
+    );
+    const isCurrent = session !== null;
+    if (!session) {
+      session = await this.tokenRepository.findByHash(
+        hashRefreshToken(successor),
+      );
+    }
+    if (!session || (userId && session.userId !== userId)) {
       throw new UnauthorizedException('Refresh token inválido');
     }
-    if (new Date(tokenData.expiresAt) < new Date()) {
+    if (session.expiresAt < new Date()) {
+      await this.tokenRepository.deleteById(session.id);
       throw new UnauthorizedException('Refresh token expirado');
     }
 
-    // Gera novo access token e refresh token
-    const user = await this.usersRepository.findById(userId);
+    const user = await this.usersRepository.findById(session.userId);
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
     if (user.deletedAt) throw new UnauthorizedException('Conta desativada');
     if (user.isFrozen)
@@ -95,44 +107,55 @@ export class AuthService {
         'Conta congelada. Entre em contato com a academia.',
       );
 
-    const payload: PayLoadData = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      companyId: user.companyId,
-    };
-
-    const newAccessToken = this.jwtService.sign(payload, {
-      secret: config.jwtSecret,
-      expiresIn: ACCESS_TOKEN_TTL,
-    });
-    const newRefreshToken = randomBytes(32).toString('hex');
-    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    await this.tokenRepository.save({
-      userId: user.id,
-      refreshToken: newRefreshToken,
-      expiresAt: newExpiresAt,
-    });
+    if (isCurrent) {
+      await this.tokenRepository.rotate(session.id, {
+        tokenHash: hashRefreshToken(successor),
+        expiresAt: refreshExpiry(),
+      });
+    } else {
+      await this.tokenRepository.touch(session.id, refreshExpiry());
+    }
 
     return {
-      access_token: newAccessToken,
-      refresh_token: newRefreshToken,
+      access_token: this.signAccessToken({
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        companyId: user.companyId,
+      }),
+      refresh_token: successor,
     };
   }
 
-  /** Revokes the user's refresh token. Access tokens expire on their own (ACCESS_TOKEN_TTL). */
-  async logout(userId: string): Promise<void> {
-    await this.tokenRepository.deleteByUserId(userId);
+  /**
+   * Ends the session of this refresh token (current or just rotated). Unknown
+   * tokens are ignored, so logout always succeeds for the client.
+   */
+  async logoutSession(refreshToken: string): Promise<void> {
+    const candidates = [
+      refreshToken,
+      successorRefreshToken(refreshToken, config.hashSecret),
+    ];
+    for (const token of candidates) {
+      const session = await this.tokenRepository.findByHash(
+        hashRefreshToken(token),
+      );
+      if (session) {
+        await this.tokenRepository.deleteById(session.id);
+        return;
+      }
+    }
   }
 
-  /** Constant-time comparison of a stored and a provided refresh token. */
-  private refreshTokenMatches(stored: string, provided: string): boolean {
-    const storedBuffer = Buffer.from(stored, 'utf8');
-    const providedBuffer = Buffer.from(provided, 'utf8');
-    return (
-      storedBuffer.length === providedBuffer.length &&
-      timingSafeEqual(storedBuffer, providedBuffer)
+  private signAccessToken(payload: PayLoadData): string {
+    return this.jwtService.sign(
+      {
+        id: payload.id,
+        username: payload.username,
+        role: payload.role,
+        companyId: payload.companyId,
+      },
+      { secret: config.jwtSecret, expiresIn: ACCESS_TOKEN_TTL },
     );
   }
 

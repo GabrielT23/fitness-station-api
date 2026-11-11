@@ -98,9 +98,10 @@ depend on the abstract class.
 - **Passwords**: `PrismaService` omits `user.password` from every query. Only login and the profile
   password change read it back, with `omit: { password: false }`. Never return a user row that was
   read that way.
-- **Tokens**: access token 15 min (not stored); refresh token 7 days, one row per user in `token`,
-  rotated on each refresh, revoked on logout, password change, freeze and delete. Details in
-  `docs/system/auth.md`.
+- **Tokens**: access token 15 min (not stored); refresh token = one session per device in `token`
+  (only its SHA-256 is stored), 60-day sliding expiry, rotated on each refresh with a deterministic
+  successor so concurrent refreshes never sign the user out. Logout ends that device's session;
+  password change, freeze and delete end all of them. Details in `docs/system/auth.md`.
 
 ## Commands
 
@@ -171,7 +172,7 @@ Tests for one domain: `npx jest src/test/unit/invoices`.
 - **The Dockerfile is named `DockerFile`** (capital F). Build with `docker build -f DockerFile`.
 - **The midnight invoice job runs in every instance**; scaling the API out duplicates it (see
   `docs/system/invoices.md`).
-- **`HASH_SECRET` is required by the config but unused.**
+- **`HASH_SECRET` keys the refresh-token successor.** Do not rotate it casually (see `docs/system/auth.md`).
 - **`MP_WEBHOOK_SECRET` must be set in production**; without it the PIX webhook is unauthenticated
   (see `docs/system/payments.md`).
 

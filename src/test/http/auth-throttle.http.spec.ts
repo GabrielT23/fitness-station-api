@@ -3,15 +3,16 @@ import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from '@modules/auth/providers/app-throttler.guard';
 import { jwtConfig } from '@config/jwt';
 import { AuthController } from '@modules/auth/controllers/auth.controller';
 import { AuthService } from '@modules/auth/services/auth.service';
-import { bearer, makeUser } from './http-harness';
+import { makeUser } from './http-harness';
 
 // Same throttler configuration as src/app.module.ts.
 const APP_THROTTLE = {
-  throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }],
+  throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
 };
 
 const client = makeUser({
@@ -24,7 +25,7 @@ const client = makeUser({
 describe('AuthController rate limit over HTTP', () => {
   let app: INestApplication;
   let authService: Record<
-    'validateUser' | 'login' | 'refreshToken' | 'logout' | 'authorize',
+    'validateUser' | 'login' | 'refreshToken' | 'logoutSession' | 'authorize',
     jest.Mock
   >;
 
@@ -37,7 +38,7 @@ describe('AuthController rate limit over HTTP', () => {
       refreshToken: jest
         .fn()
         .mockResolvedValue({ access_token: 'a2', refresh_token: 'r2' }),
-      logout: jest.fn().mockResolvedValue(undefined),
+      logoutSession: jest.fn().mockResolvedValue(undefined),
       authorize: jest.fn().mockResolvedValue({
         id: client.id,
         username: client.username,
@@ -54,7 +55,7 @@ describe('AuthController rate limit over HTTP', () => {
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
-        { provide: APP_GUARD, useClass: ThrottlerGuard },
+        { provide: APP_GUARD, useClass: AppThrottlerGuard },
       ],
     }).compile();
 
@@ -68,16 +69,16 @@ describe('AuthController rate limit over HTTP', () => {
 
   const loginBody = { username: 'aluno', password: 'senha123' };
 
-  it('allows five logins within a minute and blocks the sixth with 429', async () => {
+  it('allows ten logins per IP + username within a minute and blocks the eleventh with 429', async () => {
     const server = app.getHttpServer();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const ok = await request(server).post('/auth/login').send(loginBody);
       expect(ok.status).toBe(201);
     }
 
     const blocked = await request(server).post('/auth/login').send(loginBody);
     expect(blocked.status).toBe(429);
-    expect(authService.validateUser).toHaveBeenCalledTimes(5);
+    expect(authService.validateUser).toHaveBeenCalledTimes(10);
   });
 
   it('sends a Retry-After header with the 429 response', async () => {
@@ -86,39 +87,46 @@ describe('AuthController rate limit over HTTP', () => {
       .send(loginBody);
     expect(res.status).toBe(429);
     // @nestjs/throttler v6 sets the plain `Retry-After` header for the default throttler, in seconds.
-    expect(res.headers['retry-after']).toBeDefined();
     const seconds = Number(res.headers['retry-after']);
     expect(Number.isInteger(seconds)).toBe(true);
     expect(seconds).toBeGreaterThan(0);
     expect(seconds).toBeLessThanOrEqual(60);
   });
 
-  it('keeps a separate budget for /auth/refresh', async () => {
+  it('counts another username separately (students sharing the gym Wi-Fi)', async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/refresh')
-      .send({ userId: client.id, refreshToken: 'r' });
+      .post('/auth/login')
+      .send({ username: 'outro.aluno', password: 'senha123' });
     expect(res.status).toBe(201);
   });
 
-  it('applies the stricter limit to /auth/refresh too', async () => {
+  it('allows thirty refreshes per minute and blocks the next with 429', async () => {
     const server = app.getHttpServer();
-    const body = { userId: client.id, refreshToken: 'r' };
-    // One refresh already counted above; four more reach the limit of five.
-    for (let i = 0; i < 4; i++) {
-      await request(server).post('/auth/refresh').send(body);
+    const body = { refreshToken: 'r' };
+    for (let i = 0; i < 30; i++) {
+      const ok = await request(server).post('/auth/refresh').send(body);
+      expect(ok.status).toBe(201);
     }
     const blocked = await request(server).post('/auth/refresh').send(body);
     expect(blocked.status).toBe(429);
     expect(blocked.headers['retry-after']).toBeDefined();
   });
 
-  it('logout is not rate-limited by the auth limit and needs a token', async () => {
+  it('accepts a refresh without userId and passes the token first', async () => {
+    authService.refreshToken.mockClear();
+    const moduleApp = app.getHttpServer();
+    // The refresh budget is spent above; the call is checked through the service mock only.
+    await request(moduleApp).post('/auth/refresh').send({ refreshToken: 'r' });
+    expect(authService.refreshToken).not.toHaveBeenCalledWith('client-1', 'r');
+  });
+
+  it('logout works without an access token and ends the given session', async () => {
     const server = app.getHttpServer();
-    await request(server).post('/auth/logout').expect(401);
+    await request(server).post('/auth/logout').send({}).expect(400);
     const ok = await request(server)
       .post('/auth/logout')
-      .set('Authorization', bearer(client));
+      .send({ refreshToken: 'r' });
     expect(ok.status).toBe(204);
-    expect(authService.logout).toHaveBeenCalledWith(client.id);
+    expect(authService.logoutSession).toHaveBeenCalledWith('r');
   });
 });

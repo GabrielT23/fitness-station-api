@@ -63,9 +63,13 @@ describe('AuthGuard', () => {
       async (id: string) => registry.get(id) ?? null,
     );
     const tokens = repoMock<ITokenRepository>(
-      'findbyUserId',
+      'create',
+      'findByHash',
+      'rotate',
+      'touch',
+      'deleteById',
       'deleteByUserId',
-      'save',
+      'prune',
     );
 
     const moduleRef = await Test.createTestingModule({

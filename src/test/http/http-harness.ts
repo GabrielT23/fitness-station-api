@@ -112,9 +112,13 @@ export async function createTestApp(options: {
   });
 
   const tokens = repoMock<ITokenRepository>(
-    'findbyUserId',
+    'create',
+    'findByHash',
+    'rotate',
+    'touch',
+    'deleteById',
     'deleteByUserId',
-    'save',
+    'prune',
   );
   tokens.deleteByUserId.mockResolvedValue(undefined);
 
