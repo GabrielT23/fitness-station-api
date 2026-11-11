@@ -26,13 +26,15 @@ export class UsersService {
     createUserDto: CreateUserDto,
     companyId: string,
   ): Promise<SafeUser> {
-    const userExist = await this.usersRepository.findByUsername(
-      createUserDto.username,
-    );
+    const username = createUserDto.username.trim();
+    // findByUsername ignores case, so "Joao" and "joao" cannot both exist.
+    const userExist = await this.usersRepository.findByUsername(username);
     if (userExist) throw new ConflictException('usuário já existente');
     const passwordHash = await hash(createUserDto.password, 8);
     return this.usersRepository.create({
       ...createUserDto,
+      username,
+      name: createUserDto.name.trim(),
       password: passwordHash,
       companyId,
     });
@@ -57,8 +59,14 @@ export class UsersService {
     if (!userExist) throw new NotFoundException('Usuário não existe');
 
     const data: Partial<User> = {};
-    if (updateUserDto.username) data.username = updateUserDto.username;
-    if (updateUserDto.name) data.name = updateUserDto.name;
+    const username = updateUserDto.username?.trim();
+    if (username && username !== userExist.username) {
+      const taken = await this.usersRepository.findByUsername(username);
+      if (taken && taken.id !== id)
+        throw new ConflictException('usuário já existente');
+      data.username = username;
+    }
+    if (updateUserDto.name?.trim()) data.name = updateUserDto.name.trim();
     if (updateUserDto.password)
       data.password = await hash(updateUserDto.password, 8);
 

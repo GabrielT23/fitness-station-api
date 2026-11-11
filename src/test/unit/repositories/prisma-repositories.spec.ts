@@ -63,25 +63,69 @@ describe('Prisma repositories', () => {
   });
 
   describe('TokenRepository', () => {
-    it('finds, revokes and upserts the refresh token of a user', async () => {
-      const prisma = { token: model('findFirst', 'deleteMany', 'upsert') };
+    it('stores, finds, rotates, touches and revokes sessions by token hash', async () => {
+      const prisma = {
+        token: model(
+          'create',
+          'findUnique',
+          'updateMany',
+          'deleteMany',
+          'findMany',
+        ),
+      };
       const repo = new TokenRepository(prismaWith(prisma));
       const expiresAt = new Date('2030-01-01');
 
-      await repo.findbyUserId(ID);
+      await repo.create({ userId: ID, tokenHash: 'h1', expiresAt });
+      await repo.findByHash('h1');
+      await repo.rotate('s1', { tokenHash: 'h2', expiresAt });
+      await repo.touch('s1', expiresAt);
+      await repo.deleteById('s1');
       await repo.deleteByUserId(ID);
-      await repo.save({ userId: ID, refreshToken: 'r', expiresAt });
 
-      expect(prisma.token.findFirst).toHaveBeenCalledWith({
-        where: { userId: ID },
+      expect(prisma.token.create).toHaveBeenCalledWith({
+        data: { userId: ID, refreshToken: 'h1', expiresAt },
+      });
+      expect(prisma.token.findUnique).toHaveBeenCalledWith({
+        where: { refreshToken: 'h1' },
+      });
+      expect(prisma.token.updateMany).toHaveBeenCalledWith({
+        where: { id: 's1' },
+        data: { refreshToken: 'h2', expiresAt, lastUsedAt: expect.any(Date) },
+      });
+      expect(prisma.token.updateMany).toHaveBeenCalledWith({
+        where: { id: 's1' },
+        data: { expiresAt, lastUsedAt: expect.any(Date) },
+      });
+      expect(prisma.token.deleteMany).toHaveBeenCalledWith({
+        where: { id: 's1' },
       });
       expect(prisma.token.deleteMany).toHaveBeenCalledWith({
         where: { userId: ID },
       });
-      expect(prisma.token.upsert).toHaveBeenCalledWith({
+    });
+
+    it('prunes expired sessions and keeps only the most recently used', async () => {
+      const prisma = { token: model('deleteMany', 'findMany') };
+      prisma.token.findMany.mockResolvedValue([
+        { id: 'old-1' },
+        { id: 'old-2' },
+      ]);
+      const repo = new TokenRepository(prismaWith(prisma));
+
+      await repo.prune(ID, 10);
+
+      expect(prisma.token.deleteMany).toHaveBeenCalledWith({
+        where: { userId: ID, expiresAt: { lt: expect.any(Date) } },
+      });
+      expect(prisma.token.findMany).toHaveBeenCalledWith({
         where: { userId: ID },
-        update: { refreshToken: 'r', expiresAt },
-        create: { userId: ID, refreshToken: 'r', expiresAt },
+        orderBy: { lastUsedAt: 'desc' },
+        skip: 10,
+        select: { id: true },
+      });
+      expect(prisma.token.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: ['old-1', 'old-2'] } },
       });
     });
   });
@@ -326,6 +370,7 @@ describe('Prisma repositories', () => {
           'create',
         ),
       };
+      prisma.user.findFirst.mockResolvedValue({ id: ID });
       const repo = new UsersRepository(prismaWith(prisma));
 
       await repo.findByUsernameWithPassword('aluno');
@@ -342,6 +387,27 @@ describe('Prisma repositories', () => {
       });
       expect(prisma.user.findFirst).toHaveBeenNthCalledWith(2, {
         where: { username: 'aluno' },
+      });
+    });
+
+    it('matches usernames trimmed and case-insensitively when there is no exact match', async () => {
+      const prisma = { user: model('findFirst') };
+      prisma.user.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: ID });
+      const repo = new UsersRepository(prismaWith(prisma));
+
+      await expect(
+        repo.findByUsernameWithPassword('  Aluno '),
+      ).resolves.toEqual({ id: ID });
+
+      expect(prisma.user.findFirst).toHaveBeenNthCalledWith(1, {
+        where: { username: 'Aluno' },
+        omit: { password: false },
+      });
+      expect(prisma.user.findFirst).toHaveBeenNthCalledWith(2, {
+        where: { username: { equals: 'Aluno', mode: 'insensitive' } },
+        omit: { password: false },
       });
     });
 

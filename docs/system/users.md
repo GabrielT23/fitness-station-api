@@ -40,17 +40,17 @@ Migrations: `prisma/migrations/20250312124007_create_database_with_table_company
 
 | Method and path | Who | What it does |
 |---|---|---|
-| `POST /users` | admin | Creates a user in the caller's company. Body `username`, `name`, `password`, `role` (optional, default `client`). The body's `companyId` is accepted and ignored. 409 `usuário já existente`. |
+| `POST /users` | admin | Creates a user in the caller's company. Body `username`, `name`, `password`, `role` (optional, default `client`); `username` and `name` are trimmed. The body's `companyId` is accepted and ignored. 409 `usuário já existente` also when the username differs only by case. |
 | `GET /users` | admin | Users of the company that are not deleted, each with `plan` and the latest UNPAID or OVERDUE invoice. |
 | `GET /users/me` | any active user | The caller's own user, with `plan`. |
-| `PATCH /users/me` | any active user | Own `cpf` and `email`. A password change needs `currentPassword` and `newPassword`: 400 `Informe a senha atual para alterá-la` or `Senha atual incorreta`. A password change revokes the refresh token. |
+| `PATCH /users/me` | any active user | Own `cpf` and `email`. A password change needs `currentPassword` and `newPassword`: 400 `Informe a senha atual para alterá-la` or `Senha atual incorreta`. A password change ends every session of the user. |
 | `GET /users/:id` | admin | One user of the company, with `plan`. 404 `Usuário não existe`. |
-| `PATCH /users/:id` | admin | Changes `username`, `name`, `password`, `role`. A password change revokes the refresh token. |
+| `PATCH /users/:id` | admin | Changes `username`, `name`, `password`. A username taken by another user (ignoring case) is 409. A password change ends every session of the user. |
 | `PATCH /users/set-payment/:id` | admin | Sets `lastPayment` to now. |
 | `PATCH /users/:id/plan` | admin | Body `planId` (uuid or `null`) assigns or removes the plan. |
-| `PATCH /users/:id/freeze` | admin | Sets `isFrozen` to true and revokes the refresh token. |
+| `PATCH /users/:id/freeze` | admin | Sets `isFrozen` to true and ends every session of the user. |
 | `PATCH /users/:id/unfreeze` | admin | Sets `isFrozen` to false. |
-| `DELETE /users/:id` | admin | Soft delete (`deletedAt`) and revokes the refresh token. Returns the updated row. |
+| `DELETE /users/:id` | admin | Soft delete (`deletedAt`) and ends every session of the user. Returns the updated row. |
 
 ## How it works
 

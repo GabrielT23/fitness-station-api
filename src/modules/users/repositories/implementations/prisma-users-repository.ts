@@ -72,17 +72,33 @@ export class UsersRepository implements IUsersRepository {
     });
   }
 
+  /**
+   * Usernames are matched trimmed and case-insensitively (phone keyboards
+   * capitalise the first letter); an exact match wins when legacy data has
+   * names differing only by case.
+   */
   async findByUsername(username: string): Promise<SafeUser | null> {
-    return this.prisma.user.findFirst({
-      where: { username },
-    });
+    const name = username.trim();
+    return (
+      (await this.prisma.user.findFirst({ where: { username: name } })) ??
+      this.prisma.user.findFirst({
+        where: { username: { equals: name, mode: 'insensitive' } },
+      })
+    );
   }
 
   async findByUsernameWithPassword(username: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { username },
-      omit: { password: false },
-    });
+    const name = username.trim();
+    return (
+      (await this.prisma.user.findFirst({
+        where: { username: name },
+        omit: { password: false },
+      })) ??
+      this.prisma.user.findFirst({
+        where: { username: { equals: name, mode: 'insensitive' } },
+        omit: { password: false },
+      })
+    );
   }
 
   async findByIdWithPassword(id: string): Promise<User | null> {
