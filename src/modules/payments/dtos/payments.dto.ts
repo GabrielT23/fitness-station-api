@@ -3,8 +3,8 @@ import { IsEmail, IsString, Length } from 'class-validator';
 export class CreatePixDto {
   @IsString()
   @Length(11, 14)
-  cpf: string;
+  cpf!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 }

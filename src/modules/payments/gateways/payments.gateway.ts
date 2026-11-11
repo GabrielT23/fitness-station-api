@@ -15,7 +15,7 @@ import { configuration } from '@config/configuration';
 @Injectable()
 @WebSocketGateway({ cors: { origin: '*' }, pingInterval: 8000, pingTimeout: 20000 })
 export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  @WebSocketServer() server: Server;
+  @WebSocketServer() server!: Server;
 
   private readonly logger = new Logger(PaymentsGateway.name);
 
@@ -34,8 +34,9 @@ export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect
     try {
       const payload = this.jwtService.verify(token, { secret: configuration().jwtSecret });
       this.logger.log(`[connect] socket.id=${client.id} autenticado como userId=${payload.id}`);
-    } catch (err: any) {
-      this.logger.warn(`[connect] socket.id=${client.id} rejeitado — token inválido: ${err.message}`);
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`[connect] socket.id=${client.id} rejeitado — token inválido: ${reason}`);
       client.disconnect();
     }
   }
