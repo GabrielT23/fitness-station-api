@@ -45,7 +45,8 @@ These apply to every domain. The domain files only say where they are relevant.
   and `dtos/`. Repositories are abstract classes (`I<Name>-repository.ts`) with a Prisma
   implementation under `repositories/implementations/`, bound by a `*-repository.provider.ts`.
   Some domains add `jobs/` (invoices), `gateways/` (payments), `providers/` (auth guard).
-- **Tests**: Jest, `src/test/unit/<domain>/*.spec.ts`, shared mocks in `src/test/mocks/`. No e2e suite.
+- **Tests**: Jest, `src/test/unit/<domain>/*.spec.ts` and HTTP-level `src/test/http/*.http.spec.ts`
+  (no database), shared mocks in `src/test/mocks/`. Coverage floor 60%. No e2e suite.
 
 ## Template for a domain file
 

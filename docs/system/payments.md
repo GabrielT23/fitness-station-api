@@ -2,7 +2,8 @@
 
 A client pays an invoice by PIX through Mercado Pago. The payment is confirmed by the Mercado Pago
 webhook, which marks the invoice PAID and pushes a `payment.confirmed` event to the client over
-Socket.IO. There are no unit tests for this domain yet.
+Socket.IO. Mercado Pago is reached only through the `PixProvider` port, so tests use a
+deterministic fake and never call the real service.
 
 ## Where it is
 
@@ -11,6 +12,9 @@ Socket.IO. There are no unit tests for this domain yet.
 | `src/modules/payments/controllers/payments.controller.ts` | routes `/payments/*` |
 | `src/modules/payments/services/payments.service.ts` | PIX creation, webhook handling, signature check |
 | `src/modules/payments/gateways/payments.gateway.ts` | Socket.IO gateway (`join_invoice`, `payment.confirmed`) |
+| `src/modules/payments/gateways/pix-provider.ts` | `PixProvider` port (create PIX, get payment) |
+| `src/modules/payments/gateways/mercadopago-pix.provider.ts` | real implementation; the only file importing `mercadopago` (10 s timeout) |
+| `src/modules/payments/gateways/fake-pix.provider.ts` | deterministic fake, bound when `NODE_ENV=test` |
 | `src/modules/payments/dtos/payments.dto.ts` | `CreatePixDto` |
 | `src/modules/payments/payments.module.ts` | module |
 
@@ -41,7 +45,8 @@ Errors: 404 `Fatura não encontrada`; 401 when the invoice belongs to another us
 
 1. Logs the notification. If `MP_WEBHOOK_SECRET` is set, validates the signature (see below).
 2. Ignores every `type` other than `payment`.
-3. Fetches the payment from Mercado Pago with `payment.get`. The notification body is not trusted
+3. Without `data.id` it answers `{ ok: true }` and does nothing. Otherwise fetches the payment through
+   `PixProvider.getPayment`. The notification body is not trusted
    for the status. A failed fetch is logged and answered with `{ ok: true }`.
 4. Only `status === 'approved'` goes on. Finds the invoice by `mpPaymentId`. If it is not already
    PAID, sets `status: PAID` and `paidAt` to now.
@@ -49,14 +54,15 @@ Errors: 404 `Fatura não encontrada`; 401 when the invoice belongs to another us
 
 **Signature check** (`validateSignature`): HMAC-SHA256 with `MP_WEBHOOK_SECRET` over the template
 `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`, compared with the `v1` part of the
-`x-signature` header. Missing `ts` or `v1` gives 400 `Invalid webhook signature`; a mismatch gives
-401.
+`x-signature` header in constant time. A missing `x-signature` gives 401; missing `ts` or `v1` gives
+400 `Invalid webhook signature`; a mismatch gives 401.
 
 **Socket.IO gateway** (`PaymentsGateway`, default namespace, CORS origin `*`)
 
 - On connect, reads `auth.token` from the handshake (JWT, with or without the `Bearer ` prefix) and
   verifies it with `JWT_SECRET`. A missing or invalid token gets the socket disconnected.
-- `join_invoice` with an invoice id joins the room `invoice:<id>`.
+- `join_invoice` with an invoice id joins the room `invoice:<id>` only for the invoice owner or an
+  admin of the owner's gym (`canWatchInvoice`); anyone else is ignored and logged.
 
 ## Settings
 
@@ -68,18 +74,13 @@ Errors: 404 `Fatura não encontrada`; 401 when the invoice belongs to another us
 
 ## Points of attention
 
-- **A request without `x-signature` skips the check**, even when `MP_WEBHOOK_SECRET` is set. A
-  forged request still needs Mercado Pago to report the id as `approved`, but the check should
-  reject it.
-- The signature comparison (`hash !== v1`) is not constant-time.
-- The `if (!paymentId)` guard never fires: `String(undefined)` is `"undefined"`.
+- **Without `MP_WEBHOOK_SECRET` the webhook is not authenticated.** It must be set in production. A
+  forged notification still needs Mercado Pago to report the id as `approved`.
 - Errors after the signature check (fetch failure, unknown invoice) still answer 200 `{ ok: true }`,
   so Mercado Pago does not retry them. A payment whose fetch failed is only confirmed if a later
   notification arrives.
 - **A new PIX request overwrites `mpPaymentId`.** If the client pays the earlier QR code, its
   approved webhook finds no invoice and is ignored, although the money arrived.
-- `join_invoice` does not check that the socket's user owns the invoice. Any signed-in user can join
-  any invoice room and receive the `invoiceId` of a confirmed payment (no amount, no personal data).
 - The socket server runs in memory (`IoAdapter`). With several instances, a client connected to one
   instance does not receive the event emitted by another.
 - The webhook route is subject to the global limit of 100 requests per minute per IP.

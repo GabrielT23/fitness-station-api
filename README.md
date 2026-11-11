@@ -72,7 +72,7 @@ The API listens on `PORT` (default `3000`).
 | `make format` / `make format-check` | Prettier on `src/` |
 | `make typecheck` | TypeScript without emitting files |
 | `make docs` | check the system documentation against the code |
-| `make openapi` | runs `npm run openapi`, which is not in `package.json` yet |
+| `make openapi` | regenerates `openapi.json` (Swagger UI at `/docs` when the API runs) |
 | `make check` | format-check, lint, typecheck and docs: run before committing |
 
 ## Environment variables
@@ -125,8 +125,8 @@ Points to know before a release:
 - The midnight invoice job runs in every instance. Running more than one instance runs it more than
   once (see `docs/system/invoices.md`).
 - `vercel.json` is legacy: it configured an older Vercel deploy and is not used by Cloud Run.
-- CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm test` on Node 18 for pushes to `main` and
-  `master` and for pull requests. It does not build the image or deploy.
+- CI (`.github/workflows/ci.yml`) runs `make check` and `make coverage` in parallel on pull requests
+  and pushes to `main`, plus a gate that fails past 180 s. It does not build the image or deploy.
 
 ## Tests
 

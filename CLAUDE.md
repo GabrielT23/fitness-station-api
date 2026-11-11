@@ -73,7 +73,7 @@ docs/glossary.md            product terms → code names, and the legacy column 
 tools/docs_coverage.py      checks docs/system against the code (make docs)
 ```
 
-Stack: Node 18 (Docker and CI), TypeScript 5, NestJS 10 (`@nestjs/*`), Prisma 6 with PostgreSQL 16,
+Stack: Node 18 (Docker image) / Node 22 (CI), TypeScript 5, NestJS 10 (`@nestjs/*`), Prisma 6 with PostgreSQL 16,
 `@nestjs/jwt`, bcryptjs, class-validator, zod (env), `@nestjs/schedule`, `@nestjs/throttler`,
 Socket.IO, `mercadopago` SDK, Jest 29 with ts-jest.
 
@@ -117,7 +117,7 @@ depend on the abstract class.
 | `make test` | `npx jest` |
 | `make coverage` | `npx jest --coverage` |
 | `make docs` | `python3 tools/docs_coverage.py` |
-| `make openapi` | `npm run openapi`. **The script does not exist in `package.json` yet**, so this fails until it is added there. |
+| `make openapi` | regenerates `openapi.json` (no database needed). Commit it with any route or DTO change: `make check` fails when it is stale. |
 | `make check` | format-check, lint, typecheck, docs: what must pass before a commit |
 
 Database: `npx prisma migrate dev --name <name>` while developing a schema change (creates a migration
@@ -130,8 +130,9 @@ Tests for one domain: `npx jest src/test/unit/invoices`.
 - Database for development: `docker compose up -d postgres` (user `user`, password `password`,
   database `database`, port 5432). Matches the example `DATABASE_URL` in `README.md`.
 - `.env` in the repo root, not committed (it is in `.gitignore`). The variables are in `README.md`.
-- Unit tests do not connect to a database: they use mocks (`src/test/mocks/`), and `src/test/setup.ts`
-  sets fake environment values.
+- Tests do not connect to a database and never read the machine's `.env` (`dotenv` is skipped when
+  `NODE_ENV=test`); `src/test/setup.ts` sets fake environment values. Mercado Pago is replaced by
+  `FakePixProvider`.
 - Never run `prisma migrate reset` or `migrate dev` against a shared database.
 
 ## Code rules
@@ -147,27 +148,32 @@ Tests for one domain: `npx jest src/test/unit/invoices`.
 - **Money** is `Float` in the schema, copied into `Invoice.amount` at creation.
 - **Schema changes**: edit `prisma/schema.prisma`, create a migration with a descriptive name, never edit
   a migration that was already applied.
-- **Lint**: ESLint with `.eslintrc.js` and Prettier (`singleQuote`, `trailingComma: all`).
+- **Lint and types**: ESLint 9 flat config (`eslint.config.mjs`, `no-explicit-any` on) and Prettier
+  (`singleQuote`, `trailingComma: all`). TypeScript `strict` with `noUnusedLocals/Parameters` and
+  `noFallthroughCasesInSwitch`.
+- **No wait without a deadline**: HTTP server timeouts in `main.ts`, Mercado Pago 10 s, Prisma client
+  `connect/pool/socket_timeout` and transaction `maxWait/timeout` in `PrismaService`.
 
 ## Tests
 
 - Jest with ts-jest, `rootDir: src`, files `*.spec.ts`. Unit tests in `src/test/unit/<domain>/`.
-- A bug fix comes with a test. Payments and the webhook have no tests yet.
-- There is no e2e suite. The `test:e2e` script points to `./test/jest-e2e.json`, which does not exist.
-- CI (`.github/workflows/ci.yml`) runs `npm ci` and `npm test` on Node 18 only.
+- A bug fix comes with a test.
+- Unit tests in `src/test/unit/<domain>/`; HTTP-level tests (real controllers, guards and
+  `ValidationPipe`, mocked repositories, supertest, no database) in `src/test/http/`. No e2e suite.
+- Coverage floor of 60% (statements, branches, functions, lines) in `jest.config.js`; `make coverage`.
+- CI (`.github/workflows/ci.yml`): jobs `check` (`make check`) and `test` (`make coverage`) in
+  parallel, then `gate`, which fails when the run takes more than 180 s.
 
 ## Known pitfalls
 
-- **ESLint config is legacy.** `.eslintrc.js` is the old format, and the locked ESLint is 9.x, which reads
-  `eslint.config.*` by default. `make lint` may fail with "couldn't find a configuration" until the config
-  is migrated (or until `ESLINT_USE_FLAT_CONFIG=false` is set). Not verified by this docs change.
 - **Two lockfiles**: `package-lock.json` (npm, used by `make install` and the Docker image) and `yarn.lock`.
   Use npm.
 - **The Dockerfile is named `DockerFile`** (capital F). Build with `docker build -f DockerFile`.
 - **The midnight invoice job runs in every instance**; scaling the API out duplicates it (see
   `docs/system/invoices.md`).
 - **`HASH_SECRET` is required by the config but unused.**
-- **`PIX` webhook without `x-signature`** is not checked (see `docs/system/payments.md`).
+- **`MP_WEBHOOK_SECRET` must be set in production**; without it the PIX webhook is unauthenticated
+  (see `docs/system/payments.md`).
 
 ## Workflow
 
