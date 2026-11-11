@@ -12,7 +12,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { CreateInvoiceDto, GenerateMonthlyInvoicesDto, UpdateInvoiceStatusDto } from '../dtos/invoiceDto';
+import {
+  CreateInvoiceDto,
+  GenerateMonthlyInvoicesDto,
+  UpdateInvoiceStatusDto,
+} from '../dtos/invoiceDto';
 import { InvoicesService } from '../services/invoices.service';
 
 type AuthenticatedRequest = { user: AuthUser };
@@ -24,7 +28,10 @@ export class InvoicesController {
 
   @Post()
   @RoleUser('admin')
-  async create(@Body() createInvoiceDto: CreateInvoiceDto, @Req() req: AuthenticatedRequest) {
+  async create(
+    @Body() createInvoiceDto: CreateInvoiceDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.invoicesService.create(createInvoiceDto, req.user);
   }
 
@@ -35,12 +42,18 @@ export class InvoicesController {
   }
 
   @Get('user/:userId')
-  async findByUser(@Param('userId') userId: string, @Req() req: AuthenticatedRequest) {
+  async findByUser(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.invoicesService.findByUser(userId, req.user);
   }
 
   @Get('user/:userId/payment-status')
-  async getPaymentStatus(@Param('userId') userId: string, @Req() req: AuthenticatedRequest) {
+  async getPaymentStatus(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.invoicesService.getPaymentStatus(userId, req.user);
   }
 
@@ -56,7 +69,10 @@ export class InvoicesController {
 
   @Post('generate-monthly')
   @RoleUser('admin')
-  async generateMonthly(@Body() dto: GenerateMonthlyInvoicesDto, @Req() req: AuthenticatedRequest) {
+  async generateMonthly(
+    @Body() dto: GenerateMonthlyInvoicesDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.invoicesService.generateMonthly(dto, req.user.companyId);
   }
 

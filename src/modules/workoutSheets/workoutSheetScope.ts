@@ -5,7 +5,9 @@ import type { AuthUser } from '@modules/auth/providers/auth.guard';
  * Sheets an actor may change or delete: always limited to the actor's company.
  * Mutations are admin-only at the controller, so this is the only scope needed for writes.
  */
-export function manageSheetScope(actor: AuthUser): Prisma.WorkoutSheetWhereInput {
+export function manageSheetScope(
+  actor: AuthUser,
+): Prisma.WorkoutSheetWhereInput {
   return { companyId: actor.companyId };
 }
 

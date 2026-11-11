@@ -10,7 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AssessmentSheetsService } from '../services/assessmentSheets.service';
-import { CreateAssessmentSheetDto, UpdateAssessmentSheetDto } from '../dtos/assessmentSheetDto';
+import {
+  CreateAssessmentSheetDto,
+  UpdateAssessmentSheetDto,
+} from '../dtos/assessmentSheetDto';
 import { AuthGuard } from '@modules/auth/providers/auth.guard';
 import type { AuthUser } from '@modules/auth/providers/auth.guard';
 import { RoleUser } from '@modules/auth/role.decorator';
@@ -24,7 +27,10 @@ export class AssessmentSheetsController {
 
   @Post()
   @RoleUser('admin')
-  async create(@Body() dto: CreateAssessmentSheetDto, @Req() req: AuthenticatedRequest) {
+  async create(
+    @Body() dto: CreateAssessmentSheetDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.service.create(dto, req.user);
   }
 
@@ -42,7 +48,10 @@ export class AssessmentSheetsController {
 
   @Get('user/:userId')
   @RoleUser('admin')
-  async findByUser(@Param('userId') userId: string, @Req() req: AuthenticatedRequest) {
+  async findByUser(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.service.findForUser(userId, req.user);
   }
 

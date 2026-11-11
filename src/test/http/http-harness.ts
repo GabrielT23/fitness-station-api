@@ -1,4 +1,9 @@
-import { INestApplication, Provider, Type, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  Provider,
+  Type,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
@@ -53,7 +58,9 @@ export function repoMock<T>(...methods: Array<keyof T>): RepoMock<T> {
 const signer = new JwtService({ secret: JWT_SECRET });
 
 /** A Bearer token for `user`, signed with the same secret the guard verifies with. */
-export function bearer(user: Pick<TestUser, 'id' | 'username' | 'role' | 'companyId'>): string {
+export function bearer(
+  user: Pick<TestUser, 'id' | 'username' | 'role' | 'companyId'>,
+): string {
   const token = signer.sign({
     id: user.id,
     username: user.username,
@@ -79,7 +86,9 @@ export async function createTestApp(options: {
   providers?: Provider[];
   users?: TestUser[];
 }): Promise<TestApp> {
-  const registry = new Map((options.users ?? []).map((user) => [user.id, user]));
+  const registry = new Map(
+    (options.users ?? []).map((user) => [user.id, user]),
+  );
 
   const users = repoMock<IUsersRepository>(
     'create',
@@ -102,7 +111,11 @@ export async function createTestApp(options: {
     return user;
   });
 
-  const tokens = repoMock<ITokenRepository>('findbyUserId', 'deleteByUserId', 'save');
+  const tokens = repoMock<ITokenRepository>(
+    'findbyUserId',
+    'deleteByUserId',
+    'save',
+  );
   tokens.deleteByUserId.mockResolvedValue(undefined);
 
   const moduleRef = await Test.createTestingModule({

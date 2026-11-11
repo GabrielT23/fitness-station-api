@@ -1,14 +1,38 @@
-import request = require('supertest');
+import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { PlansController } from '@modules/plans/controllers/plans.controller';
 import { PlansService } from '@modules/plans/services/plans.service';
 import { IPlansRepository } from '@modules/plans/repositories/IPlans-repository';
-import { bearer, createTestApp, makeUser, repoMock, RepoMock, TestApp } from './http-harness';
+import {
+  bearer,
+  createTestApp,
+  makeUser,
+  repoMock,
+  RepoMock,
+  TestApp,
+} from './http-harness';
 
-const admin = makeUser({ id: 'admin-1', username: 'boss', role: 'admin', companyId: 'company-1' });
-const client = makeUser({ id: 'client-1', username: 'aluno', role: 'client', companyId: 'company-1' });
+const admin = makeUser({
+  id: 'admin-1',
+  username: 'boss',
+  role: 'admin',
+  companyId: 'company-1',
+});
+const client = makeUser({
+  id: 'client-1',
+  username: 'aluno',
+  role: 'client',
+  companyId: 'company-1',
+});
 const PLAN_ID = '7d9d0d52-6c35-4b2a-9d1f-2f0a8f1c1a11';
-const plan = { id: PLAN_ID, name: 'Mensal', value: 120, toleranceDays: 5, isExclusive: false, isActive: true };
+const plan = {
+  id: PLAN_ID,
+  name: 'Mensal',
+  value: 120,
+  toleranceDays: 5,
+  isExclusive: false,
+  isActive: true,
+};
 
 describe('PlansController over HTTP', () => {
   let testApp: TestApp;
@@ -16,7 +40,13 @@ describe('PlansController over HTTP', () => {
   let repo: RepoMock<IPlansRepository>;
 
   beforeAll(async () => {
-    repo = repoMock<IPlansRepository>('create', 'findAll', 'findById', 'update', 'deleteById');
+    repo = repoMock<IPlansRepository>(
+      'create',
+      'findAll',
+      'findById',
+      'update',
+      'deleteById',
+    );
     testApp = await createTestApp({
       controllers: [PlansController],
       providers: [PlansService, { provide: IPlansRepository, useValue: repo }],
@@ -46,10 +76,24 @@ describe('PlansController over HTTP', () => {
     const server = app.getHttpServer();
     const auth = bearer(client);
     await request(server).get('/plans').set('Authorization', auth).expect(401);
-    await request(server).post('/plans').set('Authorization', auth).send({}).expect(401);
-    await request(server).get(`/plans/${PLAN_ID}`).set('Authorization', auth).expect(401);
-    await request(server).patch(`/plans/${PLAN_ID}`).set('Authorization', auth).send({}).expect(401);
-    await request(server).delete(`/plans/${PLAN_ID}`).set('Authorization', auth).expect(401);
+    await request(server)
+      .post('/plans')
+      .set('Authorization', auth)
+      .send({})
+      .expect(401);
+    await request(server)
+      .get(`/plans/${PLAN_ID}`)
+      .set('Authorization', auth)
+      .expect(401);
+    await request(server)
+      .patch(`/plans/${PLAN_ID}`)
+      .set('Authorization', auth)
+      .send({})
+      .expect(401);
+    await request(server)
+      .delete(`/plans/${PLAN_ID}`)
+      .set('Authorization', auth)
+      .expect(401);
     expect(repo.create).not.toHaveBeenCalled();
   });
 
@@ -60,7 +104,11 @@ describe('PlansController over HTTP', () => {
       .set('Authorization', bearer(admin))
       .send({ name: 'Mensal', value: 120, toleranceDays: 5 });
     expect(res.status).toBe(201);
-    expect(repo.create).toHaveBeenCalledWith({ name: 'Mensal', value: 120, toleranceDays: 5 });
+    expect(repo.create).toHaveBeenCalledWith({
+      name: 'Mensal',
+      value: 120,
+      toleranceDays: 5,
+    });
   });
 
   it('POST /plans rejects a negative value (400)', async () => {
@@ -74,21 +122,27 @@ describe('PlansController over HTTP', () => {
 
   it('GET /plans lists plans', async () => {
     repo.findAll.mockResolvedValueOnce([plan]);
-    const res = await request(app.getHttpServer()).get('/plans').set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .get('/plans')
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
   });
 
   it('GET /plans/:id returns the plan', async () => {
     repo.findById.mockResolvedValueOnce(plan);
-    const res = await request(app.getHttpServer()).get(`/plans/${PLAN_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .get(`/plans/${PLAN_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(200);
     expect(res.body.id).toBe(PLAN_ID);
   });
 
   it('GET /plans/:id answers 404 for an unknown plan', async () => {
     repo.findById.mockResolvedValueOnce(null);
-    const res = await request(app.getHttpServer()).get(`/plans/${PLAN_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .get(`/plans/${PLAN_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(404);
   });
 
@@ -115,14 +169,18 @@ describe('PlansController over HTTP', () => {
 
   it('DELETE /plans/:id deletes an existing plan', async () => {
     repo.findById.mockResolvedValueOnce(plan);
-    const res = await request(app.getHttpServer()).delete(`/plans/${PLAN_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .delete(`/plans/${PLAN_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(200);
     expect(repo.deleteById).toHaveBeenCalledWith(PLAN_ID);
   });
 
   it('DELETE /plans/:id answers 404 for an unknown plan', async () => {
     repo.findById.mockResolvedValueOnce(null);
-    const res = await request(app.getHttpServer()).delete(`/plans/${PLAN_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .delete(`/plans/${PLAN_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(404);
     expect(repo.deleteById).not.toHaveBeenCalled();
   });

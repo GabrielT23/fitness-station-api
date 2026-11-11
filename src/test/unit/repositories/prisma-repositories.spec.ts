@@ -19,7 +19,8 @@ type PrismaMock = Record<string, ModelMock>;
 
 function model(...methods: string[]): ModelMock {
   const mock: ModelMock = {};
-  for (const method of methods) mock[method] = jest.fn().mockResolvedValue(undefined);
+  for (const method of methods)
+    mock[method] = jest.fn().mockResolvedValue(undefined);
   return mock;
 }
 
@@ -33,7 +34,9 @@ const CO = 'company-1';
 describe('Prisma repositories', () => {
   describe('PlansRepository', () => {
     it('lists plans newest first and looks one up by id', async () => {
-      const prisma = { plan: model('create', 'findMany', 'findUnique', 'update', 'delete') };
+      const prisma = {
+        plan: model('create', 'findMany', 'findUnique', 'update', 'delete'),
+      };
       const repo = new PlansRepository(prismaWith(prisma));
 
       await repo.create({ name: 'Mensal', value: 10, toleranceDays: 5 });
@@ -42,10 +45,19 @@ describe('Prisma repositories', () => {
       await repo.update(ID, { value: 12 });
       await repo.deleteById(ID);
 
-      expect(prisma.plan.create).toHaveBeenCalledWith({ data: { name: 'Mensal', value: 10, toleranceDays: 5 } });
-      expect(prisma.plan.findMany).toHaveBeenCalledWith({ orderBy: { createdAt: 'desc' } });
-      expect(prisma.plan.findUnique).toHaveBeenCalledWith({ where: { id: ID } });
-      expect(prisma.plan.update).toHaveBeenCalledWith({ where: { id: ID }, data: { value: 12 } });
+      expect(prisma.plan.create).toHaveBeenCalledWith({
+        data: { name: 'Mensal', value: 10, toleranceDays: 5 },
+      });
+      expect(prisma.plan.findMany).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(prisma.plan.findUnique).toHaveBeenCalledWith({
+        where: { id: ID },
+      });
+      expect(prisma.plan.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { value: 12 },
+      });
       expect(prisma.plan.delete).toHaveBeenCalledWith({ where: { id: ID } });
     });
   });
@@ -60,8 +72,12 @@ describe('Prisma repositories', () => {
       await repo.deleteByUserId(ID);
       await repo.save({ userId: ID, refreshToken: 'r', expiresAt });
 
-      expect(prisma.token.findFirst).toHaveBeenCalledWith({ where: { userId: ID } });
-      expect(prisma.token.deleteMany).toHaveBeenCalledWith({ where: { userId: ID } });
+      expect(prisma.token.findFirst).toHaveBeenCalledWith({
+        where: { userId: ID },
+      });
+      expect(prisma.token.deleteMany).toHaveBeenCalledWith({
+        where: { userId: ID },
+      });
       expect(prisma.token.upsert).toHaveBeenCalledWith({
         where: { userId: ID },
         update: { refreshToken: 'r', expiresAt },
@@ -72,7 +88,9 @@ describe('Prisma repositories', () => {
 
   describe('CompaniesRepository', () => {
     it('delegates every operation to the company model', async () => {
-      const prisma = { company: model('create', 'update', 'findMany', 'findUnique', 'delete') };
+      const prisma = {
+        company: model('create', 'update', 'findMany', 'findUnique', 'delete'),
+      };
       const repo = new CompaniesRepository(prismaWith(prisma));
 
       await repo.create({ name: 'Academia' });
@@ -81,21 +99,38 @@ describe('Prisma repositories', () => {
       await repo.findById(ID);
       await repo.deleteById(ID);
 
-      expect(prisma.company.create).toHaveBeenCalledWith({ data: { name: 'Academia' } });
-      expect(prisma.company.update).toHaveBeenCalledWith({ where: { id: ID }, data: { name: 'Nova' } });
+      expect(prisma.company.create).toHaveBeenCalledWith({
+        data: { name: 'Academia' },
+      });
+      expect(prisma.company.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { name: 'Nova' },
+      });
       expect(prisma.company.findMany).toHaveBeenCalled();
-      expect(prisma.company.findUnique).toHaveBeenCalledWith({ where: { id: ID } });
+      expect(prisma.company.findUnique).toHaveBeenCalledWith({
+        where: { id: ID },
+      });
       expect(prisma.company.delete).toHaveBeenCalledWith({ where: { id: ID } });
     });
   });
 
   describe('ExercisesRepository', () => {
     it('connects a new exercise to its workout and maps the muscle group', async () => {
-      const prisma = { exercise: model('create', 'findMany', 'findFirst', 'update', 'delete'), workout: model('count') };
+      const prisma = {
+        exercise: model('create', 'findMany', 'findFirst', 'update', 'delete'),
+        workout: model('count'),
+      };
       const repo = new ExercisesRepository(prismaWith(prisma));
 
       await repo.create(
-        { name: 'Supino', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60, workoutId: ID },
+        {
+          name: 'Supino',
+          reps: 10,
+          sets: 3,
+          muscleGroup: 'CHEST',
+          restPeriod: 60,
+          workoutId: ID,
+        },
         ID,
       );
 
@@ -109,7 +144,10 @@ describe('Prisma repositories', () => {
     });
 
     it('scopes lookups by the sheet filter and reports whether the workout belongs to the company', async () => {
-      const prisma = { exercise: model('findMany', 'findFirst', 'update', 'delete'), workout: model('count') };
+      const prisma = {
+        exercise: model('findMany', 'findFirst', 'update', 'delete'),
+        workout: model('count'),
+      };
       prisma.workout.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
       const repo = new ExercisesRepository(prismaWith(prisma));
 
@@ -119,9 +157,13 @@ describe('Prisma repositories', () => {
       await repo.deleteById(ID);
 
       expect(prisma.exercise.findFirst).toHaveBeenCalledWith({
-        where: { AND: [{ id: ID }, { workout: { workoutSheet: { companyId: CO } } }] },
+        where: {
+          AND: [{ id: ID }, { workout: { workoutSheet: { companyId: CO } } }],
+        },
       });
-      expect(prisma.exercise.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: ID } }));
+      expect(prisma.exercise.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: ID } }),
+      );
       expect(await repo.workoutExistsInCompany(ID, CO)).toBe(true);
       expect(await repo.workoutExistsInCompany(ID, 'other')).toBe(false);
     });
@@ -143,17 +185,34 @@ describe('Prisma repositories', () => {
       await repo.findById(ID, where);
       await repo.deleteById(ID);
 
-      expect(prisma.workout.findFirst).toHaveBeenCalledWith({ where: { AND: [{ id: ID }, where] } });
-      expect(prisma.workout.update).toHaveBeenCalledWith({ where: { id: ID }, data: { name: 'B' } });
+      expect(prisma.workout.findFirst).toHaveBeenCalledWith({
+        where: { AND: [{ id: ID }, where] },
+      });
+      expect(prisma.workout.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { name: 'B' },
+      });
       expect(prisma.workout.delete).toHaveBeenCalledWith({ where: { id: ID } });
       expect(await repo.workoutSheetExistsInCompany(ID, CO)).toBe(true);
-      expect(prisma.workoutSheet.count).toHaveBeenCalledWith({ where: { id: ID, companyId: CO } });
+      expect(prisma.workoutSheet.count).toHaveBeenCalledWith({
+        where: { id: ID, companyId: CO },
+      });
     });
   });
 
   describe('InvoicesRepository', () => {
     it('scopes a single invoice to its user, or to the gym of the user', async () => {
-      const prisma = { invoice: model('findFirst', 'findMany', 'count', 'updateMany', 'update', 'delete', 'create') };
+      const prisma = {
+        invoice: model(
+          'findFirst',
+          'findMany',
+          'count',
+          'updateMany',
+          'update',
+          'delete',
+          'create',
+        ),
+      };
       const repo = new InvoicesRepository(prismaWith(prisma));
 
       await repo.findScopedById(ID, { userId: 'u1' });
@@ -206,7 +265,9 @@ describe('Prisma repositories', () => {
     });
 
     it('updates status and stamps paidAt only when given', async () => {
-      const prisma = { invoice: model('update', 'updateMany', 'delete', 'create') };
+      const prisma = {
+        invoice: model('update', 'updateMany', 'delete', 'create'),
+      };
       const repo = new InvoicesRepository(prismaWith(prisma));
       const paidAt = new Date('2026-11-01');
 
@@ -215,7 +276,10 @@ describe('Prisma repositories', () => {
       await repo.updateManyToOverdue([ID]);
       await repo.deleteById(ID);
 
-      expect(prisma.invoice.update).toHaveBeenNthCalledWith(1, { where: { id: ID }, data: { status: 'UNPAID' } });
+      expect(prisma.invoice.update).toHaveBeenNthCalledWith(1, {
+        where: { id: ID },
+        data: { status: 'UNPAID' },
+      });
       expect(prisma.invoice.update).toHaveBeenNthCalledWith(2, {
         where: { id: ID },
         data: { status: 'PAID', paidAt },
@@ -235,7 +299,13 @@ describe('Prisma repositories', () => {
       expect(await repo.existsForUserInMonth('u1', '2026-11')).toBe(true);
       expect(await repo.existsForUserInMonth('u1', '2026-12')).toBe(false);
       await repo.findPendingByUserId('u1');
-      await repo.create({ userId: 'u1', planId: 'p', amount: 1, dueDate: new Date(), referenceMonth: '2026-11' });
+      await repo.create({
+        userId: 'u1',
+        planId: 'p',
+        amount: 1,
+        dueDate: new Date(),
+        referenceMonth: '2026-11',
+      });
 
       expect(prisma.invoice.findMany).toHaveBeenCalledWith({
         where: { userId: 'u1', status: { in: ['UNPAID', 'OVERDUE'] } },
@@ -247,7 +317,14 @@ describe('Prisma repositories', () => {
   describe('UsersRepository', () => {
     it('reads the password hash only in the two credential lookups', async () => {
       const prisma = {
-        user: model('findFirst', 'findUnique', 'findMany', 'update', 'delete', 'create'),
+        user: model(
+          'findFirst',
+          'findUnique',
+          'findMany',
+          'update',
+          'delete',
+          'create',
+        ),
       };
       const repo = new UsersRepository(prismaWith(prisma));
 
@@ -259,8 +336,13 @@ describe('Prisma repositories', () => {
         where: { username: 'aluno' },
         omit: { password: false },
       });
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { id: ID }, omit: { password: false } });
-      expect(prisma.user.findFirst).toHaveBeenNthCalledWith(2, { where: { username: 'aluno' } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: ID },
+        omit: { password: false },
+      });
+      expect(prisma.user.findFirst).toHaveBeenNthCalledWith(2, {
+        where: { username: 'aluno' },
+      });
     });
 
     it('lists active users of a company with their open invoice', async () => {
@@ -297,7 +379,10 @@ describe('Prisma repositories', () => {
 
       await repo.update(ID, { name: 'Novo', plan: { id: 'p' } } as never);
 
-      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: ID }, data: { name: 'Novo' } });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: ID },
+        data: { name: 'Novo' },
+      });
     });
 
     it('soft-deletes, freezes and assigns plans', async () => {
@@ -313,7 +398,10 @@ describe('Prisma repositories', () => {
         where: { id: ID },
         data: { deletedAt: expect.any(Date) },
       });
-      expect(prisma.user.update).toHaveBeenNthCalledWith(2, { where: { id: ID }, data: { isFrozen: true } });
+      expect(prisma.user.update).toHaveBeenNthCalledWith(2, {
+        where: { id: ID },
+        data: { isFrozen: true },
+      });
       expect(prisma.user.update).toHaveBeenNthCalledWith(3, {
         where: { id: ID },
         data: { planId: null },
@@ -326,7 +414,12 @@ describe('Prisma repositories', () => {
       const prisma = { user: model('create') };
       const repo = new UsersRepository(prismaWith(prisma));
 
-      await repo.create({ username: 'novo', name: 'Novo', password: 'h', companyId: CO } as never);
+      await repo.create({
+        username: 'novo',
+        name: 'Novo',
+        password: 'h',
+        companyId: CO,
+      } as never);
 
       expect(prisma.user.create).toHaveBeenCalledWith({
         data: { username: 'novo', name: 'Novo', password: 'h', companyId: CO },
@@ -336,13 +429,26 @@ describe('Prisma repositories', () => {
 
   describe('AssessmentSheetsRepository', () => {
     it('connects the sheet to its user and converts the date', async () => {
-      const prisma = { assessmentSheet: model('create', 'update', 'findMany', 'findFirst', 'delete'), user: model('count') };
+      const prisma = {
+        assessmentSheet: model(
+          'create',
+          'update',
+          'findMany',
+          'findFirst',
+          'delete',
+        ),
+        user: model('count'),
+      };
       const repo = new AssessmentSheetsRepository(prismaWith(prisma));
 
       await repo.create({ userId: ID, date: '2026-01-10', peso: 80 } as never);
 
       expect(prisma.assessmentSheet.create).toHaveBeenCalledWith({
-        data: { peso: 80, date: new Date('2026-01-10'), user: { connect: { id: ID } } },
+        data: {
+          peso: 80,
+          date: new Date('2026-01-10'),
+          user: { connect: { id: ID } },
+        },
       });
     });
 
@@ -353,7 +459,10 @@ describe('Prisma repositories', () => {
       await repo.update(ID, { peso: 79 } as never);
       await repo.update(ID, { date: '2026-02-01' } as never);
 
-      expect(prisma.assessmentSheet.update).toHaveBeenNthCalledWith(1, { where: { id: ID }, data: { peso: 79 } });
+      expect(prisma.assessmentSheet.update).toHaveBeenNthCalledWith(1, {
+        where: { id: ID },
+        data: { peso: 79 },
+      });
       expect(prisma.assessmentSheet.update).toHaveBeenNthCalledWith(2, {
         where: { id: ID },
         data: { date: new Date('2026-02-01') },
@@ -361,7 +470,16 @@ describe('Prisma repositories', () => {
     });
 
     it('scopes reads by user or by company and lists newest first', async () => {
-      const prisma = { assessmentSheet: model('findMany', 'findFirst', 'delete', 'update', 'create'), user: model('count') };
+      const prisma = {
+        assessmentSheet: model(
+          'findMany',
+          'findFirst',
+          'delete',
+          'update',
+          'create',
+        ),
+        user: model('count'),
+      };
       prisma.user.count.mockResolvedValueOnce(1);
       const repo = new AssessmentSheetsRepository(prismaWith(prisma));
 
@@ -379,11 +497,15 @@ describe('Prisma repositories', () => {
         where: { userId: 'u1' },
         orderBy: { date: 'desc' },
       });
-      expect(prisma.assessmentSheet.findFirst).toHaveBeenNthCalledWith(1, { where: { id: ID, userId: 'u1' } });
+      expect(prisma.assessmentSheet.findFirst).toHaveBeenNthCalledWith(1, {
+        where: { id: ID, userId: 'u1' },
+      });
       expect(prisma.assessmentSheet.findFirst).toHaveBeenNthCalledWith(2, {
         where: { id: ID, user: { companyId: CO } },
       });
-      expect(prisma.assessmentSheet.delete).toHaveBeenCalledWith({ where: { id: ID } });
+      expect(prisma.assessmentSheet.delete).toHaveBeenCalledWith({
+        where: { id: ID },
+      });
       expect(await repo.existsUserInCompany(ID, CO)).toBe(true);
     });
   });
@@ -391,7 +513,15 @@ describe('Prisma repositories', () => {
   describe('WorkoutSheetsRepository', () => {
     function sheetPrisma() {
       return {
-        workoutSheet: model('create', 'update', 'findMany', 'findFirst', 'delete', 'count', 'findUnique'),
+        workoutSheet: model(
+          'create',
+          'update',
+          'findMany',
+          'findFirst',
+          'delete',
+          'count',
+          'findUnique',
+        ),
         workout: model('create'),
         exercise: model('create'),
         user: model('findUnique', 'findMany'),
@@ -408,7 +538,9 @@ describe('Prisma repositories', () => {
 
       await repo.linkUserToWorkoutSheet(ID, ID);
 
-      expect(prisma.workoutSheetUsers.create).toHaveBeenCalledWith({ data: { userId: ID, workoutSheetId: ID } });
+      expect(prisma.workoutSheetUsers.create).toHaveBeenCalledWith({
+        data: { userId: ID, workoutSheetId: ID },
+      });
     });
 
     it('refuses a second link of the same sheet with a conflict', async () => {
@@ -418,7 +550,9 @@ describe('Prisma repositories', () => {
       prisma.workoutSheetUsers.findUnique.mockResolvedValueOnce({ userId: ID });
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
 
-      await expect(repo.linkUserToWorkoutSheet(ID, ID)).rejects.toThrow(ConflictException);
+      await expect(repo.linkUserToWorkoutSheet(ID, ID)).rejects.toThrow(
+        ConflictException,
+      );
       expect(prisma.workoutSheetUsers.create).not.toHaveBeenCalled();
     });
 
@@ -426,11 +560,15 @@ describe('Prisma repositories', () => {
       const prisma = sheetPrisma();
       prisma.user.findUnique.mockResolvedValueOnce(null);
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
-      await expect(repo.linkUserToWorkoutSheet(ID, ID)).rejects.toThrow('User not found');
+      await expect(repo.linkUserToWorkoutSheet(ID, ID)).rejects.toThrow(
+        'User not found',
+      );
 
       prisma.user.findUnique.mockResolvedValueOnce({ id: ID });
       prisma.workoutSheet.findUnique.mockResolvedValueOnce(null);
-      await expect(repo.unLinkUserToWorkoutSheet(ID, ID)).rejects.toThrow('WorkoutSheet not found');
+      await expect(repo.unLinkUserToWorkoutSheet(ID, ID)).rejects.toThrow(
+        'WorkoutSheet not found',
+      );
     });
 
     it('unlinks a user from a sheet', async () => {
@@ -450,17 +588,30 @@ describe('Prisma repositories', () => {
       const prisma = sheetPrisma();
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
 
-      await repo.createWorkoutSheet({ name: 'A', type: 'STRENGTH', isActive: true, companyId: CO } as never);
+      await repo.createWorkoutSheet({
+        name: 'A',
+        type: 'STRENGTH',
+        isActive: true,
+        companyId: CO,
+      } as never);
       await repo.createWorkout({ name: 'Treino', workoutSheetId: ID });
       await repo.createExercise(
-        { name: 'Supino', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60 } as never,
+        {
+          name: 'Supino',
+          reps: 10,
+          sets: 3,
+          muscleGroup: 'CHEST',
+          restPeriod: 60,
+        } as never,
         ID,
       );
 
       expect(prisma.workoutSheet.create).toHaveBeenCalledWith({
         data: { name: 'A', type: 'STRENGTH', isActive: true, companyId: CO },
       });
-      expect(prisma.workout.create).toHaveBeenCalledWith({ data: { name: 'Treino', workoutSheetId: ID } });
+      expect(prisma.workout.create).toHaveBeenCalledWith({
+        data: { name: 'Treino', workoutSheetId: ID },
+      });
       expect(prisma.exercise.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ workout: { connect: { id: ID } } }),
       });
@@ -470,7 +621,10 @@ describe('Prisma repositories', () => {
       const prisma = sheetPrisma();
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
 
-      await repo.updateWorkoutSheet(ID, { name: 'Nova', companyId: 'x' } as never);
+      await repo.updateWorkoutSheet(ID, {
+        name: 'Nova',
+        companyId: 'x',
+      } as never);
       await repo.updateWorkoutSheet(ID, { isActive: false });
 
       expect(prisma.workoutSheet.update).toHaveBeenNthCalledWith(1, {
@@ -485,12 +639,18 @@ describe('Prisma repositories', () => {
 
     it('lists the sheets of a user through the link table', async () => {
       const prisma = sheetPrisma();
-      prisma.workoutSheetUsers.findMany.mockResolvedValueOnce([{ workoutSheet: { id: ID } }]);
+      prisma.workoutSheetUsers.findMany.mockResolvedValueOnce([
+        { workoutSheet: { id: ID } },
+      ]);
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
 
-      await expect(repo.findAllWorkoutSheetsByUserId('u1', CO)).resolves.toEqual([{ id: ID }]);
+      await expect(
+        repo.findAllWorkoutSheetsByUserId('u1', CO),
+      ).resolves.toEqual([{ id: ID }]);
       expect(prisma.workoutSheetUsers.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { userId: 'u1', workoutSheet: { companyId: CO } } }),
+        expect.objectContaining({
+          where: { userId: 'u1', workoutSheet: { companyId: CO } },
+        }),
       );
     });
 
@@ -505,7 +665,11 @@ describe('Prisma repositories', () => {
       const adminCall = prisma.workoutSheet.findFirst.mock.calls[0][0];
       expect(adminCall.include.WorkoutSheetUsers).toBeDefined();
       const clientCall = prisma.workoutSheet.findFirst.mock.calls[1][0];
-      expect(clientCall.where).toEqual({ id: ID, companyId: CO, WorkoutSheetUsers: { some: { userId: 'u1' } } });
+      expect(clientCall.where).toEqual({
+        id: ID,
+        companyId: CO,
+        WorkoutSheetUsers: { some: { userId: 'u1' } },
+      });
       expect(clientCall.include.WorkoutSheetUsers).toBeUndefined();
     });
 
@@ -516,7 +680,9 @@ describe('Prisma repositories', () => {
 
       expect(await repo.workoutSheetExistsInCompany(ID, CO)).toBe(true);
       await repo.deleteWorkoutSheet(ID);
-      expect(prisma.workoutSheet.delete).toHaveBeenCalledWith({ where: { id: ID } });
+      expect(prisma.workoutSheet.delete).toHaveBeenCalledWith({
+        where: { id: ID },
+      });
     });
 
     it('maps the user ids found in the company', async () => {
@@ -524,7 +690,9 @@ describe('Prisma repositories', () => {
       prisma.user.findMany.mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }]);
       const repo = new WorkoutSheetsRepository(prismaWith(prisma));
 
-      await expect(repo.findUserIdsInCompany(['a', 'b', 'c'], CO)).resolves.toEqual(['a', 'b']);
+      await expect(
+        repo.findUserIdsInCompany(['a', 'b', 'c'], CO),
+      ).resolves.toEqual(['a', 'b']);
     });
   });
 });

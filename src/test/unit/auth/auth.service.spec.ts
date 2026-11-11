@@ -93,26 +93,31 @@ describe('AuthService', () => {
 
       const result = await service.validateUser('testuser', 'password123');
 
-      expect(usersRepository.findByUsernameWithPassword).toHaveBeenCalledWith('testuser');
-      expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashedpassword');
+      expect(usersRepository.findByUsernameWithPassword).toHaveBeenCalledWith(
+        'testuser',
+      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'password123',
+        'hashedpassword',
+      );
       expect(result).toEqual(mockUser);
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
       usersRepository.findByUsernameWithPassword.mockResolvedValue(null);
 
-      await expect(service.validateUser('testuser', 'password123')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.validateUser('testuser', 'password123'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if password is invalid', async () => {
       usersRepository.findByUsernameWithPassword.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.validateUser('testuser', 'wrongpassword')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.validateUser('testuser', 'wrongpassword'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -135,7 +140,10 @@ describe('AuthService', () => {
         expiresIn: ACCESS_TOKEN_TTL,
       });
       expect(tokenRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: '1', refreshToken: expect.any(String) }),
+        expect.objectContaining({
+          userId: '1',
+          refreshToken: expect.any(String),
+        }),
       );
       expect(result).toEqual({
         access_token: 'mock-token',

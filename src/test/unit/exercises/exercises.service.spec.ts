@@ -9,8 +9,18 @@ describe('ExercisesService', () => {
   let service: ExercisesService;
   let repository: jest.Mocked<IExercisesRepository>;
 
-  const admin: AuthUser = { id: 'admin1', username: 'admin', role: 'admin', companyId: 'company1' };
-  const client: AuthUser = { id: 'client1', username: 'client', role: 'client', companyId: 'company1' };
+  const admin: AuthUser = {
+    id: 'admin1',
+    username: 'admin',
+    role: 'admin',
+    companyId: 'company1',
+  };
+  const client: AuthUser = {
+    id: 'client1',
+    username: 'client',
+    role: 'client',
+    companyId: 'company1',
+  };
 
   const mockExercise = {
     id: '1',
@@ -38,7 +48,10 @@ describe('ExercisesService', () => {
   const adminWhere = { workout: { workoutSheet: { companyId: 'company1' } } };
   const clientWhere = {
     workout: {
-      workoutSheet: { companyId: 'company1', WorkoutSheetUsers: { some: { userId: 'client1' } } },
+      workoutSheet: {
+        companyId: 'company1',
+        WorkoutSheetUsers: { some: { userId: 'client1' } },
+      },
     },
   };
 
@@ -78,7 +91,10 @@ describe('ExercisesService', () => {
 
       const result = await service.create(createExerciseDto, admin);
 
-      expect(repository.workoutExistsInCompany).toHaveBeenCalledWith('1', 'company1');
+      expect(repository.workoutExistsInCompany).toHaveBeenCalledWith(
+        '1',
+        'company1',
+      );
       expect(repository.create).toHaveBeenCalledWith(createExerciseDto, '1');
       expect(result).toEqual(mockExercise);
     });
@@ -87,7 +103,17 @@ describe('ExercisesService', () => {
       repository.workoutExistsInCompany.mockResolvedValue(false);
 
       await expect(
-        service.create({ name: 'Push Up', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60, workoutId: 'foreign' }, admin),
+        service.create(
+          {
+            name: 'Push Up',
+            reps: 10,
+            sets: 3,
+            muscleGroup: 'CHEST',
+            restPeriod: 60,
+            workoutId: 'foreign',
+          },
+          admin,
+        ),
       ).rejects.toThrow(NotFoundException);
       expect(repository.create).not.toHaveBeenCalled();
     });
@@ -133,7 +159,9 @@ describe('ExercisesService', () => {
     it('should throw NotFoundException if exercise not found', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('1', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('1', admin)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -147,7 +175,11 @@ describe('ExercisesService', () => {
         restPeriod: 90,
       };
 
-      const updatedExercise = { ...mockExercise, name: 'Updated Push Up', reps: 15 };
+      const updatedExercise = {
+        ...mockExercise,
+        name: 'Updated Push Up',
+        reps: 15,
+      };
 
       repository.findById.mockResolvedValue(mockExercise);
       repository.update.mockResolvedValue(updatedExercise);
@@ -162,7 +194,9 @@ describe('ExercisesService', () => {
     it('should throw NotFoundException if exercise is outside the actor company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update('1', { name: 'Test' }, admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('1', { name: 'Test' }, admin),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
@@ -181,7 +215,9 @@ describe('ExercisesService', () => {
     it('should throw NotFoundException if exercise not found', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove('1', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('1', admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.deleteById).not.toHaveBeenCalled();
     });
   });

@@ -1,5 +1,13 @@
 // Required fields are set by the ValidationPipe from the validated request body.
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsBoolean, ValidateNested, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+  IsArray,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExerciseDto {
@@ -47,7 +55,7 @@ class UserDto {
   id!: string;
 }
 
-export class LinkWorkoutSheetToUserDto{
+export class LinkWorkoutSheetToUserDto {
   @IsUUID()
   @IsNotEmpty()
   userId!: string;

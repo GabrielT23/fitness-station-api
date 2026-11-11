@@ -16,7 +16,11 @@ export class TokenRepository implements ITokenRepository {
     await this.prisma.token.deleteMany({ where: { userId } });
   }
 
-  async save(data: { userId: string; refreshToken: string; expiresAt: Date }): Promise<void> {
+  async save(data: {
+    userId: string;
+    refreshToken: string;
+    expiresAt: Date;
+  }): Promise<void> {
     await this.prisma.token.upsert({
       where: { userId: data.userId },
       update: {

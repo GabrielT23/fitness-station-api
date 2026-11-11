@@ -10,7 +10,12 @@ import { InvoiceLifecycleJob } from './jobs/invoice-lifecycle.job';
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [InvoicesController],
-  providers: [InvoicesService, invoicesRepositoryProvider, PrismaService, InvoiceLifecycleJob],
+  providers: [
+    InvoicesService,
+    invoicesRepositoryProvider,
+    PrismaService,
+    InvoiceLifecycleJob,
+  ],
   exports: [InvoicesService],
 })
 export class InvoicesModule {}

@@ -16,9 +16,9 @@ describe('withClientTimeouts', () => {
   });
 
   it('never overrides a timeout the URL already sets', () => {
-    expect(withClientTimeouts(`${BASE}?connect_timeout=3&socket_timeout=60`)).toBe(
-      `${BASE}?connect_timeout=3&socket_timeout=60&pool_timeout=10`,
-    );
+    expect(
+      withClientTimeouts(`${BASE}?connect_timeout=3&socket_timeout=60`),
+    ).toBe(`${BASE}?connect_timeout=3&socket_timeout=60&pool_timeout=10`);
   });
 
   it('returns the URL unchanged when all three timeouts are present', () => {

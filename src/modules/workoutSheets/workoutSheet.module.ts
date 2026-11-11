@@ -7,10 +7,13 @@ import { companiesRepositoryProvider } from '@modules/companies/repositories/com
 import { AuthModule } from '@modules/auth';
 
 @Module({
-  imports: [PrismaModule, AuthModule
-  ],
+  imports: [PrismaModule, AuthModule],
   controllers: [WorkoutSheetsController],
-  providers: [WorkoutSheetsService, workoutSheetsRepositoryProvider, companiesRepositoryProvider],
+  providers: [
+    WorkoutSheetsService,
+    workoutSheetsRepositoryProvider,
+    companiesRepositoryProvider,
+  ],
   exports: [workoutSheetsRepositoryProvider],
 })
 export class WorkoutSheetsModule {}

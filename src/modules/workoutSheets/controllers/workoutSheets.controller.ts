@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Put,
+  UseGuards,
+  Req,
+  Patch,
+} from '@nestjs/common';
 import { WorkoutSheetsService } from '../services/workoutSheets.service';
 import {
-  CreateWorkoutSheetDto, LinkWorkoutSheetToUserDto, UpdateWorkoutSheetDto,
-  SetActiveSheetDto, AdminSetActiveSheetDto,
+  CreateWorkoutSheetDto,
+  LinkWorkoutSheetToUserDto,
+  UpdateWorkoutSheetDto,
+  SetActiveSheetDto,
+  AdminSetActiveSheetDto,
 } from '../dtos/workoutSheetDto';
 import { AuthGuard, AuthUser } from '@modules/auth/providers/auth.guard';
 import { RoleUser } from '@modules/auth/role.decorator';
@@ -20,8 +34,14 @@ export class WorkoutSheetsController {
 
   @RoleUser('admin')
   @Post()
-  async create(@Body() createWorkoutSheetDto: CreateWorkoutSheetDto, @Req() req: { user: AuthUser }) {
-    return await this.workoutSheetsService.create(createWorkoutSheetDto, req.user);
+  async create(
+    @Body() createWorkoutSheetDto: CreateWorkoutSheetDto,
+    @Req() req: { user: AuthUser },
+  ) {
+    return await this.workoutSheetsService.create(
+      createWorkoutSheetDto,
+      req.user,
+    );
   }
 
   @RoleUser('admin')
@@ -31,7 +51,11 @@ export class WorkoutSheetsController {
     @Body() updateWorkoutSheetDto: UpdateWorkoutSheetDto,
     @Req() req: { user: AuthUser },
   ) {
-    return await this.workoutSheetsService.update(id, updateWorkoutSheetDto, req.user);
+    return await this.workoutSheetsService.update(
+      id,
+      updateWorkoutSheetDto,
+      req.user,
+    );
   }
 
   @RoleUser('admin')
@@ -76,15 +100,29 @@ export class WorkoutSheetsController {
 
   @RoleUser('client')
   @Patch('/client/set-active')
-  async setMyActiveSheet(@Req() req: { user: AuthUser }, @Body() dto: SetActiveSheetDto) {
-    await this.workoutSheetsService.setActiveSheetForUser(req.user.id, dto.workoutSheetId ?? null, req.user);
+  async setMyActiveSheet(
+    @Req() req: { user: AuthUser },
+    @Body() dto: SetActiveSheetDto,
+  ) {
+    await this.workoutSheetsService.setActiveSheetForUser(
+      req.user.id,
+      dto.workoutSheetId ?? null,
+      req.user,
+    );
     return { message: 'Ficha ativa atualizada' };
   }
 
   @RoleUser('admin')
   @Patch('/set-active-for-user')
-  async setActiveForUser(@Body() dto: AdminSetActiveSheetDto, @Req() req: { user: AuthUser }) {
-    await this.workoutSheetsService.setActiveSheetForUser(dto.userId, dto.workoutSheetId ?? null, req.user);
+  async setActiveForUser(
+    @Body() dto: AdminSetActiveSheetDto,
+    @Req() req: { user: AuthUser },
+  ) {
+    await this.workoutSheetsService.setActiveSheetForUser(
+      dto.userId,
+      dto.workoutSheetId ?? null,
+      req.user,
+    );
     return { message: 'Ficha ativa atualizada' };
   }
 

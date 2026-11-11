@@ -6,9 +6,7 @@ import { Company } from '@prisma/client';
 
 @Injectable()
 export class CompaniesService {
-  constructor(
-    private readonly companiesRepository: ICompaniesRepository,
-  ) {}
+  constructor(private readonly companiesRepository: ICompaniesRepository) {}
 
   async create(createCompanyDto: CreateCompanyDto): Promise<Company> {
     return await this.companiesRepository.create(createCompanyDto);
@@ -27,12 +25,18 @@ export class CompaniesService {
     return company;
   }
 
-  async update(id: string, companyId: string, updateCompanyDto: UpdateCompanyDto): Promise<Company> {
+  async update(
+    id: string,
+    companyId: string,
+    updateCompanyDto: UpdateCompanyDto,
+  ): Promise<Company> {
     this.assertOwnCompany(id, companyId);
     const company = await this.companiesRepository.findById(id);
     if (!company) throw new NotFoundException('Empresa não encontrada');
     // Only the name is writable: the body's `id` must never reach Prisma.
-    return await this.companiesRepository.update(id, { name: updateCompanyDto.name });
+    return await this.companiesRepository.update(id, {
+      name: updateCompanyDto.name,
+    });
   }
 
   async remove(id: string, companyId: string): Promise<void> {

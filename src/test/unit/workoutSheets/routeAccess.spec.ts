@@ -16,15 +16,24 @@ describe('route access', () => {
   function guardsOf(controller: Type<unknown>, handler?: object): unknown[] {
     return [
       ...(Reflect.getMetadata('__guards__', controller) ?? []),
-      ...(handler ? Reflect.getMetadata('__guards__', handler) ?? [] : []),
+      ...(handler ? (Reflect.getMetadata('__guards__', handler) ?? []) : []),
     ];
   }
 
-  function expectRoutes(controller: Type<unknown>, expected: Record<string, 'admin' | 'client'>) {
+  function expectRoutes(
+    controller: Type<unknown>,
+    expected: Record<string, 'admin' | 'client'>,
+  ) {
     for (const [method, role] of Object.entries(expected)) {
       const handler = controller.prototype[method];
-      expect({ method, guarded: guardsOf(controller, handler).includes(AuthGuard) }).toEqual({ method, guarded: true });
-      expect({ method, role: reflector.getAllAndOverride(RoleUser, [handler, controller]) }).toEqual({ method, role });
+      expect({
+        method,
+        guarded: guardsOf(controller, handler).includes(AuthGuard),
+      }).toEqual({ method, guarded: true });
+      expect({
+        method,
+        role: reflector.getAllAndOverride(RoleUser, [handler, controller]),
+      }).toEqual({ method, role });
     }
   }
 

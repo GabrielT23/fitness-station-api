@@ -10,9 +10,17 @@ describe('PlansController access', () => {
   });
 
   it('does not override the admin requirement on any handler', () => {
-    const handlers = ['create', 'findAll', 'findOne', 'update', 'remove'] as const;
+    const handlers = [
+      'create',
+      'findAll',
+      'findOne',
+      'update',
+      'remove',
+    ] as const;
     for (const name of handlers) {
-      expect(reflector.get(RoleUser, PlansController.prototype[name])).toBeUndefined();
+      expect(
+        reflector.get(RoleUser, PlansController.prototype[name]),
+      ).toBeUndefined();
     }
   });
 });

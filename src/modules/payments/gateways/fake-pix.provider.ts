@@ -23,7 +23,10 @@ export class FakePixProvider extends PixProvider {
     const qrCode = `00020101fake-pix:${input.idempotencyKey}:${input.amount.toFixed(2)}`;
 
     if (!this.statuses.has(id)) {
-      this.statuses.set(id, { status: 'pending', statusDetail: 'pending_waiting_transfer' });
+      this.statuses.set(id, {
+        status: 'pending',
+        statusDetail: 'pending_waiting_transfer',
+      });
     }
 
     return {
@@ -51,5 +54,8 @@ export class FakePixProvider extends PixProvider {
 
 /** Derives a stable positive integer id from a key (first 8 hex digits of its SHA-256). */
 function idFromKey(key: string): number {
-  return parseInt(crypto.createHash('sha256').update(key).digest('hex').slice(0, 8), 16);
+  return parseInt(
+    crypto.createHash('sha256').update(key).digest('hex').slice(0, 8),
+    16,
+  );
 }

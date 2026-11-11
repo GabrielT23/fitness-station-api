@@ -31,7 +31,8 @@ export class AuthService {
   ) {}
 
   async validateUser(username: string, passwordUser: string): Promise<User> {
-    const user = await this.usersRepository.findByUsernameWithPassword(username);
+    const user =
+      await this.usersRepository.findByUsernameWithPassword(username);
     if (!user) {
       throw new UnauthorizedException('usuario ou senha incorreta');
     }
@@ -43,7 +44,9 @@ export class AuthService {
       throw new UnauthorizedException('Conta desativada');
     }
     if (user.isFrozen) {
-      throw new UnauthorizedException('Conta congelada. Entre em contato com a academia.');
+      throw new UnauthorizedException(
+        'Conta congelada. Entre em contato com a academia.',
+      );
     }
     return user;
   }
@@ -73,7 +76,10 @@ export class AuthService {
 
   async refreshToken(userId: string, refreshToken: string) {
     const tokenData = await this.tokenRepository.findbyUserId(userId);
-    if (!tokenData || !this.refreshTokenMatches(tokenData.refreshToken, refreshToken)) {
+    if (
+      !tokenData ||
+      !this.refreshTokenMatches(tokenData.refreshToken, refreshToken)
+    ) {
       throw new UnauthorizedException('Refresh token inválido');
     }
     if (new Date(tokenData.expiresAt) < new Date()) {
@@ -84,7 +90,10 @@ export class AuthService {
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
     if (user.deletedAt) throw new UnauthorizedException('Conta desativada');
-    if (user.isFrozen) throw new UnauthorizedException('Conta congelada. Entre em contato com a academia.');
+    if (user.isFrozen)
+      throw new UnauthorizedException(
+        'Conta congelada. Entre em contato com a academia.',
+      );
 
     const payload: PayLoadData = {
       id: user.id,
@@ -121,7 +130,10 @@ export class AuthService {
   private refreshTokenMatches(stored: string, provided: string): boolean {
     const storedBuffer = Buffer.from(stored, 'utf8');
     const providedBuffer = Buffer.from(provided, 'utf8');
-    return storedBuffer.length === providedBuffer.length && timingSafeEqual(storedBuffer, providedBuffer);
+    return (
+      storedBuffer.length === providedBuffer.length &&
+      timingSafeEqual(storedBuffer, providedBuffer)
+    );
   }
 
   decodeToken(token: string): PayLoadData {
@@ -144,7 +156,11 @@ export class AuthService {
     if (!user || user.deletedAt || user.isFrozen) {
       throw new UnauthorizedException('Não autorizado');
     }
-    if (options.requiredRole && options.requiredRole !== user.role && user.role !== 'admin') {
+    if (
+      options.requiredRole &&
+      options.requiredRole !== user.role &&
+      user.role !== 'admin'
+    ) {
       throw new UnauthorizedException('Não autorizado');
     }
     return {

@@ -1,6 +1,6 @@
 // Required fields are set by the ValidationPipe from the validated request body.
-import { Role } from "@prisma/client";
-import { IsNotEmpty, IsString } from "class-validator";
+import { Role } from '@prisma/client';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class AuthBody {
   @IsNotEmpty({ message: 'username é obrigatório' })

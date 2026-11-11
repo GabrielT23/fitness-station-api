@@ -11,7 +11,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AssignPlanDto, CreateUserDto, UpdateProfileDto, UpdateUserDto } from '../dtos/userDTO';
+import {
+  AssignPlanDto,
+  CreateUserDto,
+  UpdateProfileDto,
+  UpdateUserDto,
+} from '../dtos/userDTO';
 import { UsersService } from '../services/users.service';
 
 @Controller('/users')
@@ -21,7 +26,10 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @RoleUser('admin')
   @Post()
-  async create(@Req() req: { user: AuthUser }, @Body() createUserDto: CreateUserDto) {
+  async create(
+    @Req() req: { user: AuthUser },
+    @Body() createUserDto: CreateUserDto,
+  ) {
     return await this.usersService.create(createUserDto, req.user.companyId);
   }
 
@@ -40,7 +48,10 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @Patch('me')
-  async updateMe(@Req() req: { user: AuthUser }, @Body() dto: UpdateProfileDto) {
+  async updateMe(
+    @Req() req: { user: AuthUser },
+    @Body() dto: UpdateProfileDto,
+  ) {
     return await this.usersService.updateMyProfile(req.user.id, dto);
   }
 
@@ -59,7 +70,11 @@ export class UsersController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    return await this.usersService.update(id, updateUserDto, req.user.companyId);
+    return await this.usersService.update(
+      id,
+      updateUserDto,
+      req.user.companyId,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -77,7 +92,11 @@ export class UsersController {
     @Param('id') id: string,
     @Body() assignPlanDto: AssignPlanDto,
   ) {
-    return await this.usersService.assignPlan(id, assignPlanDto, req.user.companyId);
+    return await this.usersService.assignPlan(
+      id,
+      assignPlanDto,
+      req.user.companyId,
+    );
   }
 
   @UseGuards(AuthGuard)

@@ -1,11 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
 import { AssessmentSheet, Prisma } from '@prisma/client';
-import { AssessmentSheetScope, IAssessmentSheetsRepository } from '../IAssessmentSheets-repository';
-import { CreateAssessmentSheetDto, UpdateAssessmentSheetDto } from '../../dtos/assessmentSheetDto';
+import {
+  AssessmentSheetScope,
+  IAssessmentSheetsRepository,
+} from '../IAssessmentSheets-repository';
+import {
+  CreateAssessmentSheetDto,
+  UpdateAssessmentSheetDto,
+} from '../../dtos/assessmentSheetDto';
 
-const scopeWhere = (scope: AssessmentSheetScope): Prisma.AssessmentSheetWhereInput =>
-  'userId' in scope ? { userId: scope.userId } : { user: { companyId: scope.companyId } };
+const scopeWhere = (
+  scope: AssessmentSheetScope,
+): Prisma.AssessmentSheetWhereInput =>
+  'userId' in scope
+    ? { userId: scope.userId }
+    : { user: { companyId: scope.companyId } };
 
 @Injectable()
 export class AssessmentSheetsRepository implements IAssessmentSheetsRepository {
@@ -22,7 +32,10 @@ export class AssessmentSheetsRepository implements IAssessmentSheetsRepository {
     });
   }
 
-  async update(id: string, data: UpdateAssessmentSheetDto): Promise<AssessmentSheet> {
+  async update(
+    id: string,
+    data: UpdateAssessmentSheetDto,
+  ): Promise<AssessmentSheet> {
     const { date, ...fields } = data;
     return this.prisma.assessmentSheet.update({
       where: { id },
@@ -40,7 +53,10 @@ export class AssessmentSheetsRepository implements IAssessmentSheetsRepository {
     });
   }
 
-  async findScopedById(id: string, scope: AssessmentSheetScope): Promise<AssessmentSheet | null> {
+  async findScopedById(
+    id: string,
+    scope: AssessmentSheetScope,
+  ): Promise<AssessmentSheet | null> {
     return this.prisma.assessmentSheet.findFirst({
       where: { id, ...scopeWhere(scope) },
     });
@@ -53,8 +69,13 @@ export class AssessmentSheetsRepository implements IAssessmentSheetsRepository {
     });
   }
 
-  async existsUserInCompany(userId: string, companyId: string): Promise<boolean> {
-    const count = await this.prisma.user.count({ where: { id: userId, companyId } });
+  async existsUserInCompany(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.user.count({
+      where: { id: userId, companyId },
+    });
     return count > 0;
   }
 

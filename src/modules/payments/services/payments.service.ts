@@ -35,8 +35,10 @@ export class PaymentsService {
 
     if (!invoice) throw new NotFoundException('Fatura não encontrada');
     if (invoice.userId !== userId) throw new UnauthorizedException();
-    if (invoice.status === 'PAID') throw new BadRequestException('Fatura já foi paga');
-    if (invoice.status === 'CANCELLED') throw new BadRequestException('Fatura cancelada');
+    if (invoice.status === 'PAID')
+      throw new BadRequestException('Fatura já foi paga');
+    if (invoice.status === 'CANCELLED')
+      throw new BadRequestException('Fatura cancelada');
 
     const nameParts = (invoice.user?.name ?? 'Aluno').split(' ');
     const cleanCpf = dto.cpf.replace(/\D/g, '');
@@ -67,16 +69,25 @@ export class PaymentsService {
     };
   }
 
-  async handleWebhook(body: WebhookBody, headers: Record<string, string | undefined>) {
-    this.logger.log(`[webhook] recebido | type=${body.type} | data.id=${body.data?.id}`);
-    this.logger.debug(`[webhook] headers x-signature=${headers['x-signature'] ?? 'ausente'}`);
+  async handleWebhook(
+    body: WebhookBody,
+    headers: Record<string, string | undefined>,
+  ) {
+    this.logger.log(
+      `[webhook] recebido | type=${body.type} | data.id=${body.data?.id}`,
+    );
+    this.logger.debug(
+      `[webhook] headers x-signature=${headers['x-signature'] ?? 'ausente'}`,
+    );
 
     if (process.env.MP_WEBHOOK_SECRET) {
       this.logger.log(`[webhook] validando assinatura...`);
       this.validateSignature(body, headers);
       this.logger.log(`[webhook] assinatura válida`);
     } else {
-      this.logger.warn(`[webhook] MP_WEBHOOK_SECRET não configurado — validação ignorada`);
+      this.logger.warn(
+        `[webhook] MP_WEBHOOK_SECRET não configurado — validação ignorada`,
+      );
     }
 
     if (body.type !== 'payment') {
@@ -85,7 +96,8 @@ export class PaymentsService {
     }
 
     const rawId = body.data?.id;
-    const paymentId = rawId === undefined || rawId === null ? '' : String(rawId);
+    const paymentId =
+      rawId === undefined || rawId === null ? '' : String(rawId);
     if (!paymentId) {
       this.logger.warn(`[webhook] data.id ausente no payload`);
       return { ok: true };
@@ -96,29 +108,41 @@ export class PaymentsService {
     let mpPayment: PixPaymentStatus | undefined;
     try {
       mpPayment = await this.pix.getPayment(paymentId);
-      this.logger.log(`[webhook] pagamento MP obtido | status=${mpPayment?.status} | status_detail=${mpPayment?.statusDetail}`);
+      this.logger.log(
+        `[webhook] pagamento MP obtido | status=${mpPayment?.status} | status_detail=${mpPayment?.statusDetail}`,
+      );
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`[webhook] falha ao buscar pagamento MP ${paymentId}: ${reason}`);
+      this.logger.warn(
+        `[webhook] falha ao buscar pagamento MP ${paymentId}: ${reason}`,
+      );
       return { ok: true };
     }
 
     if (mpPayment?.status !== 'approved') {
-      this.logger.log(`[webhook] pagamento não aprovado (status=${mpPayment?.status}) — nenhuma ação`);
+      this.logger.log(
+        `[webhook] pagamento não aprovado (status=${mpPayment?.status}) — nenhuma ação`,
+      );
       return { ok: true };
     }
 
-    this.logger.log(`[webhook] pagamento aprovado! Buscando fatura com mpPaymentId=${paymentId}...`);
+    this.logger.log(
+      `[webhook] pagamento aprovado! Buscando fatura com mpPaymentId=${paymentId}...`,
+    );
     const invoice = await this.prisma.invoice.findFirst({
       where: { mpPaymentId: paymentId },
     });
 
     if (!invoice) {
-      this.logger.warn(`[webhook] nenhuma fatura encontrada com mpPaymentId=${paymentId}`);
+      this.logger.warn(
+        `[webhook] nenhuma fatura encontrada com mpPaymentId=${paymentId}`,
+      );
       return { ok: true };
     }
     if (invoice.status === 'PAID') {
-      this.logger.log(`[webhook] fatura ${invoice.id} já estava PAID — ignorando`);
+      this.logger.log(
+        `[webhook] fatura ${invoice.id} já estava PAID — ignorando`,
+      );
       return { ok: true };
     }
 
@@ -128,17 +152,23 @@ export class PaymentsService {
     });
     this.logger.log(`[webhook] fatura ${invoice.id} atualizada para PAID`);
 
-    this.logger.log(`[webhook] disparando evento socket para invoice:${invoice.id}...`);
+    this.logger.log(
+      `[webhook] disparando evento socket para invoice:${invoice.id}...`,
+    );
     this.paymentsGateway.emitPaymentConfirmed(invoice.id);
 
     return { ok: true };
   }
 
-  private validateSignature(body: WebhookBody, headers: Record<string, string | undefined>) {
+  private validateSignature(
+    body: WebhookBody,
+    headers: Record<string, string | undefined>,
+  ) {
     const xSignature = headers['x-signature'];
     const xRequestId = headers['x-request-id'];
     // With a secret configured, an unsigned notification is rejected, never trusted.
-    if (!xSignature) throw new UnauthorizedException('Webhook signature missing');
+    if (!xSignature)
+      throw new UnauthorizedException('Webhook signature missing');
 
     const parts = xSignature.split(',');
     const ts = parts.find((p) => p.startsWith('ts='))?.split('=')[1];
@@ -153,7 +183,10 @@ export class PaymentsService {
 
     const expected = Buffer.from(hash, 'hex');
     const received = Buffer.from(v1, 'hex');
-    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+    if (
+      expected.length !== received.length ||
+      !crypto.timingSafeEqual(expected, received)
+    ) {
       throw new UnauthorizedException('Webhook signature mismatch');
     }
   }

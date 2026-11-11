@@ -1,19 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { InvoicesService, Requester } from '@modules/invoices/services/invoices.service';
+import {
+  InvoicesService,
+  Requester,
+} from '@modules/invoices/services/invoices.service';
 import { IInvoicesRepository } from '@modules/invoices/repositories/IInvoices-repository';
 import { PrismaService } from '@modules/prisma/prisma.service';
 
 describe('InvoicesService (ownership and company scope)', () => {
   let service: InvoicesService;
   let repo: Record<keyof IInvoicesRepository, jest.Mock>;
-  let prisma: { user: { findUnique: jest.Mock; findMany: jest.Mock }; invoice: { findFirst: jest.Mock; count: jest.Mock } };
+  let prisma: {
+    user: { findUnique: jest.Mock; findMany: jest.Mock };
+    invoice: { findFirst: jest.Mock; count: jest.Mock };
+  };
 
-  const admin: Requester = { id: 'admin-1', role: 'admin', companyId: 'company-A' };
-  const client: Requester = { id: 'client-1', role: 'client', companyId: 'company-A' };
+  const admin: Requester = {
+    id: 'admin-1',
+    role: 'admin',
+    companyId: 'company-A',
+  };
+  const client: Requester = {
+    id: 'client-1',
+    role: 'client',
+    companyId: 'company-A',
+  };
 
-  const userInCompanyA = { id: 'client-1', companyId: 'company-A', plan: null, planId: null };
-  const userInCompanyB = { id: 'client-9', companyId: 'company-B', plan: null, planId: null };
+  const userInCompanyA = {
+    id: 'client-1',
+    companyId: 'company-A',
+    plan: null,
+    planId: null,
+  };
+  const userInCompanyB = {
+    id: 'client-9',
+    companyId: 'company-B',
+    plan: null,
+    planId: null,
+  };
 
   beforeEach(async () => {
     repo = {
@@ -30,7 +54,10 @@ describe('InvoicesService (ownership and company scope)', () => {
     } as unknown as Record<keyof IInvoicesRepository, jest.Mock>;
 
     prisma = {
-      user: { findUnique: jest.fn().mockResolvedValue(userInCompanyA), findMany: jest.fn().mockResolvedValue([]) },
+      user: {
+        findUnique: jest.fn().mockResolvedValue(userInCompanyA),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       invoice: { findFirst: jest.fn(), count: jest.fn() },
     };
 
@@ -54,7 +81,9 @@ describe('InvoicesService (ownership and company scope)', () => {
     });
 
     it('forbids a client from reading another user invoices', async () => {
-      await expect(service.findByUser('client-9', client)).rejects.toThrow(ForbiddenException);
+      await expect(service.findByUser('client-9', client)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(repo.findByUserId).not.toHaveBeenCalled();
     });
 
@@ -66,34 +95,46 @@ describe('InvoicesService (ownership and company scope)', () => {
 
     it('hides users of another gym from an admin', async () => {
       prisma.user.findUnique.mockResolvedValue(userInCompanyB);
-      await expect(service.findByUser('client-9', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.findByUser('client-9', admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repo.findByUserId).not.toHaveBeenCalled();
     });
   });
 
   describe('getPaymentStatus (M2)', () => {
     it('forbids a client from reading another user payment status', async () => {
-      await expect(service.getPaymentStatus('client-9', client)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.getPaymentStatus('client-9', client),
+      ).rejects.toThrow(ForbiddenException);
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
 
     it('hides another gym user payment status from an admin', async () => {
       prisma.user.findUnique.mockResolvedValue(userInCompanyB);
-      await expect(service.getPaymentStatus('client-9', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.getPaymentStatus('client-9', admin)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('findOne (M2)', () => {
     it('scopes a client lookup to their own invoices', async () => {
       repo.findScopedById.mockResolvedValue(null);
-      await expect(service.findOne('inv-1', client)).rejects.toThrow(NotFoundException);
-      expect(repo.findScopedById).toHaveBeenCalledWith('inv-1', { userId: 'client-1' });
+      await expect(service.findOne('inv-1', client)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(repo.findScopedById).toHaveBeenCalledWith('inv-1', {
+        userId: 'client-1',
+      });
     });
 
     it('scopes an admin lookup to their company', async () => {
       repo.findScopedById.mockResolvedValue({ id: 'inv-1' });
       await service.findOne('inv-1', admin);
-      expect(repo.findScopedById).toHaveBeenCalledWith('inv-1', { companyId: 'company-A' });
+      expect(repo.findScopedById).toHaveBeenCalledWith('inv-1', {
+        companyId: 'company-A',
+      });
     });
   });
 
@@ -113,7 +154,9 @@ describe('InvoicesService (ownership and company scope)', () => {
 
     it('does not delete an invoice outside the admin company', async () => {
       repo.findScopedById.mockResolvedValue(null);
-      await expect(service.remove('inv-9', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('inv-9', admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repo.deleteById).not.toHaveBeenCalled();
     });
 
@@ -137,7 +180,9 @@ describe('InvoicesService (ownership and company scope)', () => {
     it('generates monthly invoices only for the admin company', async () => {
       await service.generateMonthly({}, 'company-A');
       expect(prisma.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ companyId: 'company-A' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 'company-A' }),
+        }),
       );
     });
 

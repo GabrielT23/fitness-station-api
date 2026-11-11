@@ -24,7 +24,9 @@ export function withClientTimeouts(url: string): string {
     .map(([key, value]) => `${key}=${value}`);
   if (additions.length === 0) return url;
 
-  const joined = [query, ...additions].filter((part) => part.length > 0).join('&');
+  const joined = [query, ...additions]
+    .filter((part) => part.length > 0)
+    .join('&');
   return `${base}?${joined}`;
 }
 
@@ -45,7 +47,9 @@ export class PrismaService
   constructor() {
     const databaseUrl = process.env.DATABASE_URL;
     super({
-      ...(databaseUrl ? { datasourceUrl: withClientTimeouts(databaseUrl) } : {}),
+      ...(databaseUrl
+        ? { datasourceUrl: withClientTimeouts(databaseUrl) }
+        : {}),
       omit: { user: { password: true } },
       transactionOptions: { maxWait: 5000, timeout: 10000 },
     });

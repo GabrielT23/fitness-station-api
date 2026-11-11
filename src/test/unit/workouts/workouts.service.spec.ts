@@ -8,8 +8,18 @@ describe('WorkoutsService', () => {
   let service: WorkoutsService;
   let repository: jest.Mocked<IWorkoutsRepository>;
 
-  const admin: AuthUser = { id: 'admin1', username: 'admin', role: 'admin', companyId: 'company1' };
-  const client: AuthUser = { id: 'client1', username: 'client', role: 'client', companyId: 'company1' };
+  const admin: AuthUser = {
+    id: 'admin1',
+    username: 'admin',
+    role: 'admin',
+    companyId: 'company1',
+  };
+  const client: AuthUser = {
+    id: 'client1',
+    username: 'client',
+    role: 'client',
+    companyId: 'company1',
+  };
 
   const mockWorkout = {
     id: 'w1',
@@ -30,7 +40,10 @@ describe('WorkoutsService', () => {
 
   const adminWhere = { workoutSheet: { companyId: 'company1' } };
   const clientWhere = {
-    workoutSheet: { companyId: 'company1', WorkoutSheetUsers: { some: { userId: 'client1' } } },
+    workoutSheet: {
+      companyId: 'company1',
+      WorkoutSheetUsers: { some: { userId: 'client1' } },
+    },
   };
 
   beforeEach(async () => {
@@ -54,19 +67,28 @@ describe('WorkoutsService', () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(true);
       repository.create.mockResolvedValue(mockWorkout);
 
-      const result = await service.create({ name: 'Treino A', workoutSheetId: 'sheet1' }, admin);
+      const result = await service.create(
+        { name: 'Treino A', workoutSheetId: 'sheet1' },
+        admin,
+      );
 
-      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith('sheet1', 'company1');
-      expect(repository.create).toHaveBeenCalledWith({ name: 'Treino A', workoutSheetId: 'sheet1' });
+      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith(
+        'sheet1',
+        'company1',
+      );
+      expect(repository.create).toHaveBeenCalledWith({
+        name: 'Treino A',
+        workoutSheetId: 'sheet1',
+      });
       expect(result).toEqual(mockWorkout);
     });
 
     it('should refuse a sheet of another company and create nothing', async () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.create({ name: 'Treino A', workoutSheetId: 'foreign' }, admin)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.create({ name: 'Treino A', workoutSheetId: 'foreign' }, admin),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.create).not.toHaveBeenCalled();
     });
   });
@@ -103,7 +125,9 @@ describe('WorkoutsService', () => {
     it('should throw NotFoundException when the workout is outside the scope', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('w1', client)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('w1', client)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -122,14 +146,18 @@ describe('WorkoutsService', () => {
       repository.findById.mockResolvedValue(mockWorkout);
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.update('w1', { workoutSheetId: 'foreign' }, admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('w1', { workoutSheetId: 'foreign' }, admin),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.update).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when the workout is outside the company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update('w1', { name: 'x' }, admin)).rejects.toThrow(NotFoundException);
+      await expect(service.update('w1', { name: 'x' }, admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
@@ -148,7 +176,9 @@ describe('WorkoutsService', () => {
     it('should not delete a workout outside the company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove('w1', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('w1', admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.deleteById).not.toHaveBeenCalled();
     });
   });

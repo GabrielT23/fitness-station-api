@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AssignPlanDto, CreateUserDto, UpdateProfileDto, UpdateUserDto } from '../dtos/userDTO';
+import {
+  AssignPlanDto,
+  CreateUserDto,
+  UpdateProfileDto,
+  UpdateUserDto,
+} from '../dtos/userDTO';
 import { IUsersRepository, SafeUser } from '../repositories/IUsers-repository';
 import { compare, hash } from 'bcryptjs';
 import { User } from '@prisma/client';
@@ -17,7 +22,10 @@ export class UsersService {
     private readonly tokenRepository: ITokenRepository,
   ) {}
 
-  async create(createUserDto: CreateUserDto, companyId: string): Promise<SafeUser> {
+  async create(
+    createUserDto: CreateUserDto,
+    companyId: string,
+  ): Promise<SafeUser> {
     const userExist = await this.usersRepository.findByUsername(
       createUserDto.username,
     );
@@ -40,14 +48,19 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, companyId: string): Promise<SafeUser> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    companyId: string,
+  ): Promise<SafeUser> {
     const userExist = await this.usersRepository.findById(id, companyId);
     if (!userExist) throw new NotFoundException('Usuário não existe');
 
     const data: Partial<User> = {};
     if (updateUserDto.username) data.username = updateUserDto.username;
     if (updateUserDto.name) data.name = updateUserDto.name;
-    if (updateUserDto.password) data.password = await hash(updateUserDto.password, 8);
+    if (updateUserDto.password)
+      data.password = await hash(updateUserDto.password, 8);
 
     const user = await this.usersRepository.update(id, data);
     if (data.password) await this.tokenRepository.deleteByUserId(id);
@@ -83,7 +96,11 @@ export class UsersService {
   }
 
   /** Plans are not scoped by company in the schema, so the plan itself is not checked against `companyId`. */
-  async assignPlan(id: string, dto: AssignPlanDto, companyId: string): Promise<SafeUser> {
+  async assignPlan(
+    id: string,
+    dto: AssignPlanDto,
+    companyId: string,
+  ): Promise<SafeUser> {
     const userExist = await this.usersRepository.findById(id, companyId);
     if (!userExist) throw new NotFoundException('Usuário não existe');
     return this.usersRepository.assignPlan(id, dto.planId ?? null);
@@ -101,7 +118,8 @@ export class UsersService {
 
     const data: Partial<User> = {};
     if (dto.newPassword) {
-      if (!dto.currentPassword) throw new BadRequestException('Informe a senha atual para alterá-la');
+      if (!dto.currentPassword)
+        throw new BadRequestException('Informe a senha atual para alterá-la');
       const matches = await compare(dto.currentPassword, user.password);
       if (!matches) throw new BadRequestException('Senha atual incorreta');
       data.password = await hash(dto.newPassword, 8);

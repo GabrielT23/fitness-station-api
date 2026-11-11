@@ -3,7 +3,10 @@ import { NotFoundException } from '@nestjs/common';
 import { WorkoutSheetsService } from '@modules/workoutSheets/services/workoutSheets.service';
 import { IWorkoutSheetsRepository } from '@modules/workoutSheets/repositories/IWorkoutSheets-repository';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import type { CreateWorkoutSheetDto, UpdateWorkoutSheetDto } from '@modules/workoutSheets/dtos/workoutSheetDto';
+import type {
+  CreateWorkoutSheetDto,
+  UpdateWorkoutSheetDto,
+} from '@modules/workoutSheets/dtos/workoutSheetDto';
 import type { AuthUser } from '@modules/auth/providers/auth.guard';
 import { Exercise, WorkoutType } from '@prisma/client';
 
@@ -11,8 +14,18 @@ describe('WorkoutSheetsService', () => {
   let service: WorkoutSheetsService;
   let repository: jest.Mocked<IWorkoutSheetsRepository>;
 
-  const admin: AuthUser = { id: 'admin1', username: 'admin', role: 'admin', companyId: 'company1' };
-  const client: AuthUser = { id: 'client1', username: 'client', role: 'client', companyId: 'company1' };
+  const admin: AuthUser = {
+    id: 'admin1',
+    username: 'admin',
+    role: 'admin',
+    companyId: 'company1',
+  };
+  const client: AuthUser = {
+    id: 'client1',
+    username: 'client',
+    role: 'client',
+    companyId: 'company1',
+  };
 
   const mockWorkoutSheet = {
     id: '1',
@@ -107,9 +120,15 @@ describe('WorkoutSheetsService', () => {
 
       const result = await service.create(createWorkoutSheetDto, admin);
 
-      expect(repository.findUserIdsInCompany).toHaveBeenCalledWith(['user1'], 'company1');
+      expect(repository.findUserIdsInCompany).toHaveBeenCalledWith(
+        ['user1'],
+        'company1',
+      );
       expect(repository.createWorkoutSheet).toHaveBeenCalled();
-      expect(repository.linkUserToWorkoutSheet).toHaveBeenCalledWith('user1', '1');
+      expect(repository.linkUserToWorkoutSheet).toHaveBeenCalledWith(
+        'user1',
+        '1',
+      );
       expect(repository.createWorkout).toHaveBeenCalled();
       expect(repository.createExercise).toHaveBeenCalled();
       expect(result).toEqual(mockWorkoutSheet);
@@ -119,7 +138,12 @@ describe('WorkoutSheetsService', () => {
       repository.createWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
 
       await service.create(
-        { name: 'Sheet', type: 'STRENGTH', isActive: true, companyId: 'other-company' },
+        {
+          name: 'Sheet',
+          type: 'STRENGTH',
+          isActive: true,
+          companyId: 'other-company',
+        },
         admin,
       );
 
@@ -132,7 +156,15 @@ describe('WorkoutSheetsService', () => {
       repository.findUserIdsInCompany.mockResolvedValue([]);
 
       await expect(
-        service.create({ name: 'Sheet', type: 'STRENGTH', isActive: true, users: [{ id: 'foreign' }] }, admin),
+        service.create(
+          {
+            name: 'Sheet',
+            type: 'STRENGTH',
+            isActive: true,
+            users: [{ id: 'foreign' }],
+          },
+          admin,
+        ),
       ).rejects.toThrow(NotFoundException);
 
       expect(repository.createWorkoutSheet).not.toHaveBeenCalled();
@@ -175,7 +207,10 @@ describe('WorkoutSheetsService', () => {
 
       const result = await service.update('1', updateWorkoutSheetDto, admin);
 
-      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith('1', 'company1');
+      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith(
+        '1',
+        'company1',
+      );
       expect(repository.updateWorkoutSheet).toHaveBeenCalled();
       expect(result).toEqual(updatedWorkoutSheet);
     });
@@ -184,7 +219,14 @@ describe('WorkoutSheetsService', () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(true);
       repository.updateWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
 
-      await service.update('1', { name: 'x', companyId: 'other-company' } satisfies UpdateWorkoutSheetDto, admin);
+      await service.update(
+        '1',
+        {
+          name: 'x',
+          companyId: 'other-company',
+        } satisfies UpdateWorkoutSheetDto,
+        admin,
+      );
 
       const [, data] = repository.updateWorkoutSheet.mock.calls[0];
       expect(data).not.toHaveProperty('companyId');
@@ -193,7 +235,9 @@ describe('WorkoutSheetsService', () => {
     it('should throw NotFoundException if the sheet is not in the actor company', async () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.update('1', {}, admin)).rejects.toThrow(NotFoundException);
+      await expect(service.update('1', {}, admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.updateWorkoutSheet).not.toHaveBeenCalled();
     });
   });
@@ -211,12 +255,19 @@ describe('WorkoutSheetsService', () => {
 
   describe('findAllByUserId', () => {
     it('should return the sheets linked to the client and mark the active one', async () => {
-      repository.findAllWorkoutSheetsByUserId.mockResolvedValue([mockWorkoutSheet]);
-      mockPrisma.user.findUnique.mockResolvedValue({ activeWorkoutSheetId: '1' });
+      repository.findAllWorkoutSheetsByUserId.mockResolvedValue([
+        mockWorkoutSheet,
+      ]);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        activeWorkoutSheetId: '1',
+      });
 
       const result = await service.findAllByUserId(client);
 
-      expect(repository.findAllWorkoutSheetsByUserId).toHaveBeenCalledWith('client1', 'company1');
+      expect(repository.findAllWorkoutSheetsByUserId).toHaveBeenCalledWith(
+        'client1',
+        'company1',
+      );
       expect(result).toEqual([{ ...mockWorkoutSheet, isActive: true }]);
     });
   });
@@ -227,7 +278,10 @@ describe('WorkoutSheetsService', () => {
 
       const result = await service.findOne('1', admin);
 
-      expect(repository.findWorkoutSheetById).toHaveBeenCalledWith('1', 'company1');
+      expect(repository.findWorkoutSheetById).toHaveBeenCalledWith(
+        '1',
+        'company1',
+      );
       expect(repository.findWorkoutSheetForClient).not.toHaveBeenCalled();
       expect(result).toEqual(mockWorkoutSheet);
     });
@@ -237,7 +291,11 @@ describe('WorkoutSheetsService', () => {
 
       const result = await service.findOne('1', client);
 
-      expect(repository.findWorkoutSheetForClient).toHaveBeenCalledWith('1', 'client1', 'company1');
+      expect(repository.findWorkoutSheetForClient).toHaveBeenCalledWith(
+        '1',
+        'client1',
+        'company1',
+      );
       expect(repository.findWorkoutSheetById).not.toHaveBeenCalled();
       expect(result).toEqual(mockWorkoutSheet);
     });
@@ -245,13 +303,17 @@ describe('WorkoutSheetsService', () => {
     it('should answer NotFound to a client who is not linked to the sheet', async () => {
       repository.findWorkoutSheetForClient.mockResolvedValue(null);
 
-      await expect(service.findOne('1', client)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('1', client)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw NotFoundException if an admin asks for a sheet outside the company', async () => {
       repository.findWorkoutSheetById.mockResolvedValue(null);
 
-      await expect(service.findOne('1', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('1', admin)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -263,14 +325,22 @@ describe('WorkoutSheetsService', () => {
 
       await service.linkUserToWorkoutSheet('user1', 'sheet1', admin);
 
-      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith('sheet1', 'company1');
-      expect(repository.linkUserToWorkoutSheet).toHaveBeenCalledWith('user1', 'sheet1');
+      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith(
+        'sheet1',
+        'company1',
+      );
+      expect(repository.linkUserToWorkoutSheet).toHaveBeenCalledWith(
+        'user1',
+        'sheet1',
+      );
     });
 
     it('should refuse a sheet outside the company', async () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.linkUserToWorkoutSheet('user1', 'foreign-sheet', admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.linkUserToWorkoutSheet('user1', 'foreign-sheet', admin),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.linkUserToWorkoutSheet).not.toHaveBeenCalled();
     });
 
@@ -278,7 +348,9 @@ describe('WorkoutSheetsService', () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(true);
       repository.findUserIdsInCompany.mockResolvedValue([]);
 
-      await expect(service.linkUserToWorkoutSheet('foreign-user', 'sheet1', admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.linkUserToWorkoutSheet('foreign-user', 'sheet1', admin),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.linkUserToWorkoutSheet).not.toHaveBeenCalled();
     });
   });
@@ -287,7 +359,9 @@ describe('WorkoutSheetsService', () => {
     it('should refuse a user outside the company', async () => {
       repository.findUserIdsInCompany.mockResolvedValue([]);
 
-      await expect(service.setActiveSheetForUser('foreign-user', null, admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.setActiveSheetForUser('foreign-user', null, admin),
+      ).rejects.toThrow(NotFoundException);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
@@ -295,7 +369,9 @@ describe('WorkoutSheetsService', () => {
       repository.findUserIdsInCompany.mockResolvedValue(['user1']);
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.setActiveSheetForUser('user1', 'foreign-sheet', admin)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.setActiveSheetForUser('user1', 'foreign-sheet', admin),
+      ).rejects.toThrow(NotFoundException);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
   });
@@ -307,14 +383,19 @@ describe('WorkoutSheetsService', () => {
 
       await service.remove('1', admin);
 
-      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith('1', 'company1');
+      expect(repository.workoutSheetExistsInCompany).toHaveBeenCalledWith(
+        '1',
+        'company1',
+      );
       expect(repository.deleteWorkoutSheet).toHaveBeenCalledWith('1');
     });
 
     it('should not remove a sheet outside the actor company', async () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(false);
 
-      await expect(service.remove('1', admin)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('1', admin)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.deleteWorkoutSheet).not.toHaveBeenCalled();
     });
   });

@@ -1,5 +1,11 @@
 // Required fields are set by the ValidationPipe from the validated request body.
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsInt,
+} from 'class-validator';
 
 export class CreateExerciseDto {
   @IsString()

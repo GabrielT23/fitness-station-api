@@ -1,17 +1,43 @@
-import request = require('supertest');
+import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { UsersController } from '@modules/users/controllers/users.controller';
 import { UsersService } from '@modules/users/services/users.service';
-import { bearer, createTestApp, makeUser, RepoMock, TestApp } from './http-harness';
+import {
+  bearer,
+  createTestApp,
+  makeUser,
+  RepoMock,
+  TestApp,
+} from './http-harness';
 import { IUsersRepository } from '@modules/users/repositories/IUsers-repository';
 import { ITokenRepository } from '@modules/auth/repositories/ITokens-repository';
 
 const CO = 'company-1';
-const admin = makeUser({ id: 'admin-1', username: 'boss', role: 'admin', companyId: CO });
-const client = makeUser({ id: 'client-1', username: 'aluno', role: 'client', companyId: CO });
-const otherGymUser = makeUser({ id: 'other-1', username: 'outro', role: 'client', companyId: 'company-2' });
+const admin = makeUser({
+  id: 'admin-1',
+  username: 'boss',
+  role: 'admin',
+  companyId: CO,
+});
+const client = makeUser({
+  id: 'client-1',
+  username: 'aluno',
+  role: 'client',
+  companyId: CO,
+});
+const otherGymUser = makeUser({
+  id: 'other-1',
+  username: 'outro',
+  role: 'client',
+  companyId: 'company-2',
+});
 const targetId = 'client-2';
-const target = makeUser({ id: targetId, username: 'alvo', role: 'client', companyId: CO });
+const target = makeUser({
+  id: targetId,
+  username: 'alvo',
+  role: 'client',
+  companyId: CO,
+});
 
 describe('UsersController over HTTP', () => {
   let testApp: TestApp;
@@ -39,7 +65,9 @@ describe('UsersController over HTTP', () => {
   });
 
   describe('without a token', () => {
-    const routes: Array<[method: 'get' | 'post' | 'patch' | 'delete', path: string]> = [
+    const routes: Array<
+      [method: 'get' | 'post' | 'patch' | 'delete', path: string]
+    > = [
       ['post', '/users'],
       ['get', '/users'],
       ['get', '/users/me'],
@@ -70,7 +98,9 @@ describe('UsersController over HTTP', () => {
     });
 
     it('GET /users is refused (401: admin-only route)', async () => {
-      const res = await request(app.getHttpServer()).get('/users').set('Authorization', bearer(client));
+      const res = await request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', bearer(client));
       expect(res.status).toBe(401);
       expect(users.findAllByCompany).not.toHaveBeenCalled();
     });
@@ -84,29 +114,45 @@ describe('UsersController over HTTP', () => {
     });
 
     it('GET /users/me returns the caller profile', async () => {
-      const res = await request(app.getHttpServer()).get('/users/me').set('Authorization', bearer(client));
+      const res = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', bearer(client));
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ id: client.id, username: client.username });
+      expect(res.body).toMatchObject({
+        id: client.id,
+        username: client.username,
+      });
     });
 
     it('PATCH /users/me updates only the caller profile', async () => {
-      users.findByIdWithPassword.mockResolvedValueOnce({ ...client, password: 'hash' });
+      users.findByIdWithPassword.mockResolvedValueOnce({
+        ...client,
+        password: 'hash',
+      });
       users.update.mockResolvedValueOnce({ ...client, email: 'a@b.com' });
       const res = await request(app.getHttpServer())
         .patch('/users/me')
         .set('Authorization', bearer(client))
         .send({ email: 'a@b.com' });
       expect(res.status).toBe(200);
-      expect(users.update).toHaveBeenCalledWith(client.id, { email: 'a@b.com' });
+      expect(users.update).toHaveBeenCalledWith(client.id, {
+        email: 'a@b.com',
+      });
     });
   });
 
   describe('with an admin token', () => {
     it('POST /users creates the user in the admin company, ignoring any companyId in the body', async () => {
       users.findByUsername.mockResolvedValueOnce(null);
-      users.create.mockImplementationOnce(async (data: { companyId: string; username: string }) => ({
-        ...makeUser({ id: 'new-1', username: data.username, companyId: data.companyId }),
-      }));
+      users.create.mockImplementationOnce(
+        async (data: { companyId: string; username: string }) => ({
+          ...makeUser({
+            id: 'new-1',
+            username: data.username,
+            companyId: data.companyId,
+          }),
+        }),
+      );
 
       const res = await request(app.getHttpServer())
         .post('/users')
@@ -120,27 +166,38 @@ describe('UsersController over HTTP', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(users.create).toHaveBeenCalledWith(expect.objectContaining({ companyId: CO, username: 'novo' }));
+      expect(users.create).toHaveBeenCalledWith(
+        expect.objectContaining({ companyId: CO, username: 'novo' }),
+      );
     });
 
     it('POST /users rejects unknown fields with 400', async () => {
       const res = await request(app.getHttpServer())
         .post('/users')
         .set('Authorization', bearer(admin))
-        .send({ username: 'novo', name: 'Novo', password: 'senha123', isAdminOverride: true });
+        .send({
+          username: 'novo',
+          name: 'Novo',
+          password: 'senha123',
+          isAdminOverride: true,
+        });
       expect(res.status).toBe(400);
     });
 
     it('GET /users lists the users of the admin company', async () => {
       users.findAllByCompany.mockResolvedValueOnce([client, target]);
-      const res = await request(app.getHttpServer()).get('/users').set('Authorization', bearer(admin));
+      const res = await request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', bearer(admin));
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(2);
       expect(users.findAllByCompany).toHaveBeenCalledWith(CO);
     });
 
     it('GET /users/:id returns a user of the same company', async () => {
-      const res = await request(app.getHttpServer()).get(`/users/${targetId}`).set('Authorization', bearer(admin));
+      const res = await request(app.getHttpServer())
+        .get(`/users/${targetId}`)
+        .set('Authorization', bearer(admin));
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(targetId);
     });
@@ -159,16 +216,23 @@ describe('UsersController over HTTP', () => {
         .set('Authorization', bearer(admin))
         .send({ name: 'Novo nome' });
       expect(res.status).toBe(200);
-      expect(users.update).toHaveBeenCalledWith(targetId, { name: 'Novo nome' });
+      expect(users.update).toHaveBeenCalledWith(targetId, {
+        name: 'Novo nome',
+      });
     });
 
     it('PATCH /users/set-payment/:id stamps lastPayment', async () => {
-      users.update.mockResolvedValueOnce({ ...target, lastPayment: new Date() });
+      users.update.mockResolvedValueOnce({
+        ...target,
+        lastPayment: new Date(),
+      });
       const res = await request(app.getHttpServer())
         .patch(`/users/set-payment/${targetId}`)
         .set('Authorization', bearer(admin));
       expect(res.status).toBe(200);
-      expect(users.update).toHaveBeenCalledWith(targetId, { lastPayment: expect.any(Date) });
+      expect(users.update).toHaveBeenCalledWith(targetId, {
+        lastPayment: expect.any(Date),
+      });
     });
 
     it('PATCH /users/:id/plan assigns a plan', async () => {
@@ -202,8 +266,13 @@ describe('UsersController over HTTP', () => {
     });
 
     it('DELETE /users/:id soft-deletes the user and revokes the refresh token', async () => {
-      users.softDelete.mockResolvedValueOnce({ ...target, deletedAt: new Date() });
-      const res = await request(app.getHttpServer()).delete(`/users/${targetId}`).set('Authorization', bearer(admin));
+      users.softDelete.mockResolvedValueOnce({
+        ...target,
+        deletedAt: new Date(),
+      });
+      const res = await request(app.getHttpServer())
+        .delete(`/users/${targetId}`)
+        .set('Authorization', bearer(admin));
       expect(res.status).toBe(200);
       expect(users.softDelete).toHaveBeenCalledWith(targetId);
       expect(tokens.deleteByUserId).toHaveBeenCalledWith(targetId);

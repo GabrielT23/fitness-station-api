@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { WorkoutsService } from '../services/workouts.service';
 import { CreateWorkoutDto, UpdateWorkoutDto } from '../dtos/workoutDTO';
 import { AuthGuard, AuthUser } from '@modules/auth/providers/auth.guard';
@@ -16,7 +26,10 @@ export class WorkoutsController {
   constructor(private readonly workoutsService: WorkoutsService) {}
 
   @Post()
-  async create(@Body() createWorkoutDto: CreateWorkoutDto, @Req() req: { user: AuthUser }) {
+  async create(
+    @Body() createWorkoutDto: CreateWorkoutDto,
+    @Req() req: { user: AuthUser },
+  ) {
     return await this.workoutsService.create(createWorkoutDto, req.user);
   }
 
@@ -33,7 +46,11 @@ export class WorkoutsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateWorkoutDto: UpdateWorkoutDto, @Req() req: { user: AuthUser }) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateWorkoutDto: UpdateWorkoutDto,
+    @Req() req: { user: AuthUser },
+  ) {
     return await this.workoutsService.update(id, updateWorkoutDto, req.user);
   }
 

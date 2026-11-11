@@ -1,5 +1,15 @@
 // filepath: d:\documentos\projetos\pessoais\fitness-station\fitness-station-api\src\modules\companies\controllers\companies.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard, AuthUser } from '@modules/auth/providers/auth.guard';
 import { RoleUser } from '@modules/auth/role.decorator';
 import { CompaniesService } from '../services/companies.service';
@@ -32,7 +42,11 @@ export class CompaniesController {
     @Param('id') id: string,
     @Body() updateCompanyDto: UpdateCompanyDto,
   ) {
-    return await this.companiesService.update(id, req.user.companyId, updateCompanyDto);
+    return await this.companiesService.update(
+      id,
+      req.user.companyId,
+      updateCompanyDto,
+    );
   }
 
   @Delete(':id')

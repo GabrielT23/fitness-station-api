@@ -85,14 +85,18 @@ describe('CompaniesService', () => {
     });
 
     it('should throw NotFoundException for another company without querying the repository', async () => {
-      await expect(service.findOne(OTHER_ID, OWN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(OTHER_ID, OWN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.findById).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if the own company is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne(OWN_ID, OWN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(OWN_ID, OWN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -103,10 +107,14 @@ describe('CompaniesService', () => {
       repository.findById.mockResolvedValue(mockCompany);
       repository.update.mockResolvedValue(updatedCompany);
 
-      const result = await service.update(OWN_ID, OWN_ID, { name: 'Updated Company' });
+      const result = await service.update(OWN_ID, OWN_ID, {
+        name: 'Updated Company',
+      });
 
       expect(repository.findById).toHaveBeenCalledWith(OWN_ID);
-      expect(repository.update).toHaveBeenCalledWith(OWN_ID, { name: 'Updated Company' });
+      expect(repository.update).toHaveBeenCalledWith(OWN_ID, {
+        name: 'Updated Company',
+      });
       expect(result).toEqual(updatedCompany);
     });
 
@@ -121,9 +129,9 @@ describe('CompaniesService', () => {
     it('should throw NotFoundException if the own company is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update(OWN_ID, OWN_ID, { name: 'Test' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(OWN_ID, OWN_ID, { name: 'Test' }),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
@@ -140,7 +148,9 @@ describe('CompaniesService', () => {
     });
 
     it('should throw NotFoundException for another company without deleting', async () => {
-      await expect(service.remove(OTHER_ID, OWN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(OTHER_ID, OWN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.findById).not.toHaveBeenCalled();
       expect(repository.deleteById).not.toHaveBeenCalled();
     });
@@ -148,7 +158,9 @@ describe('CompaniesService', () => {
     it('should throw NotFoundException if the own company is missing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove(OWN_ID, OWN_ID)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(OWN_ID, OWN_ID)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.deleteById).not.toHaveBeenCalled();
     });
   });

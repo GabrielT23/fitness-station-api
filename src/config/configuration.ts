@@ -10,7 +10,6 @@ export interface Config {
   jwtSecret: string;
 }
 
-
 export const configuration = (): Config => {
   const envSchema = zod.object({
     PORT: zod.string().min(1).regex(/^\d+$/).default('3000').transform(Number),
@@ -33,4 +32,3 @@ export const configuration = (): Config => {
     jwtSecret: parsedEnv.data?.JWT_SECRET,
   };
 };
-

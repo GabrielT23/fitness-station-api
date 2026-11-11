@@ -30,7 +30,9 @@ export class CreateInvoiceDto {
 
   @IsString()
   @IsNotEmpty()
-  @Matches(/^\d{4}-\d{2}$/, { message: 'referenceMonth deve estar no formato YYYY-MM' })
+  @Matches(/^\d{4}-\d{2}$/, {
+    message: 'referenceMonth deve estar no formato YYYY-MM',
+  })
   referenceMonth!: string;
 }
 

@@ -23,9 +23,15 @@ async function main(): Promise<void> {
   const { AppModule } = await import('../src/app.module');
   const { buildOpenApiDocument } = await import('../src/config/swagger');
 
-  const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+    abortOnError: false,
+  });
   const document = buildOpenApiDocument(app);
-  writeFileSync(join(__dirname, '..', 'openapi.json'), `${JSON.stringify(document, null, 2)}\n`);
+  writeFileSync(
+    join(__dirname, '..', 'openapi.json'),
+    `${JSON.stringify(document, null, 2)}\n`,
+  );
   await app.close();
   console.log('openapi.json written');
 }

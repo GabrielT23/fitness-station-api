@@ -5,11 +5,10 @@ import { usersRepositoryProvider } from './repositories/users-repository.provide
 import { AuthModule } from '@modules/auth';
 import { PrismaModule } from '@modules/prisma/prisma.module';
 
-
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [UsersController],
   providers: [UsersService, usersRepositoryProvider],
-  exports: [usersRepositoryProvider]
+  exports: [usersRepositoryProvider],
 })
 export class UsersModule {}

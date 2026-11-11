@@ -1,4 +1,4 @@
-import request = require('supertest');
+import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
@@ -10,25 +10,47 @@ import { AuthService } from '@modules/auth/services/auth.service';
 import { bearer, makeUser } from './http-harness';
 
 // Same throttler configuration as src/app.module.ts.
-const APP_THROTTLE = { throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }] };
+const APP_THROTTLE = {
+  throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }],
+};
 
-const client = makeUser({ id: 'client-1', username: 'aluno', role: 'client', companyId: 'company-1' });
+const client = makeUser({
+  id: 'client-1',
+  username: 'aluno',
+  role: 'client',
+  companyId: 'company-1',
+});
 
 describe('AuthController rate limit over HTTP', () => {
   let app: INestApplication;
-  let authService: Record<'validateUser' | 'login' | 'refreshToken' | 'logout' | 'authorize', jest.Mock>;
+  let authService: Record<
+    'validateUser' | 'login' | 'refreshToken' | 'logout' | 'authorize',
+    jest.Mock
+  >;
 
   beforeAll(async () => {
     authService = {
       validateUser: jest.fn().mockResolvedValue(client),
-      login: jest.fn().mockResolvedValue({ access_token: 'a', refresh_token: 'r' }),
-      refreshToken: jest.fn().mockResolvedValue({ access_token: 'a2', refresh_token: 'r2' }),
+      login: jest
+        .fn()
+        .mockResolvedValue({ access_token: 'a', refresh_token: 'r' }),
+      refreshToken: jest
+        .fn()
+        .mockResolvedValue({ access_token: 'a2', refresh_token: 'r2' }),
       logout: jest.fn().mockResolvedValue(undefined),
-      authorize: jest.fn().mockResolvedValue({ id: client.id, username: client.username, role: client.role, companyId: client.companyId }),
+      authorize: jest.fn().mockResolvedValue({
+        id: client.id,
+        username: client.username,
+        role: client.role,
+        companyId: client.companyId,
+      }),
     };
 
     const moduleRef = await Test.createTestingModule({
-      imports: [JwtModule.register(jwtConfig), ThrottlerModule.forRoot(APP_THROTTLE)],
+      imports: [
+        JwtModule.register(jwtConfig),
+        ThrottlerModule.forRoot(APP_THROTTLE),
+      ],
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
@@ -59,7 +81,9 @@ describe('AuthController rate limit over HTTP', () => {
   });
 
   it('sends a Retry-After header with the 429 response', async () => {
-    const res = await request(app.getHttpServer()).post('/auth/login').send(loginBody);
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send(loginBody);
     expect(res.status).toBe(429);
     // @nestjs/throttler v6 sets the plain `Retry-After` header for the default throttler, in seconds.
     expect(res.headers['retry-after']).toBeDefined();
@@ -91,7 +115,9 @@ describe('AuthController rate limit over HTTP', () => {
   it('logout is not rate-limited by the auth limit and needs a token', async () => {
     const server = app.getHttpServer();
     await request(server).post('/auth/logout').expect(401);
-    const ok = await request(server).post('/auth/logout').set('Authorization', bearer(client));
+    const ok = await request(server)
+      .post('/auth/logout')
+      .set('Authorization', bearer(client));
     expect(ok.status).toBe(204);
     expect(authService.logout).toHaveBeenCalledWith(client.id);
   });

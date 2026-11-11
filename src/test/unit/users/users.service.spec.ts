@@ -1,7 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UsersService } from '@modules/users/services/users.service';
-import { IUsersRepository, SafeUser } from '@modules/users/repositories/IUsers-repository';
+import {
+  IUsersRepository,
+  SafeUser,
+} from '@modules/users/repositories/IUsers-repository';
 import { ITokenRepository } from '@modules/auth/repositories/ITokens-repository';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
@@ -110,7 +117,10 @@ describe('UsersService', () => {
       repository.create.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedpassword');
 
-      await service.create({ ...createUserDto, companyId: COMPANY_B }, COMPANY_A);
+      await service.create(
+        { ...createUserDto, companyId: COMPANY_B },
+        COMPANY_A,
+      );
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ companyId: COMPANY_A }),
@@ -120,7 +130,9 @@ describe('UsersService', () => {
     it('should throw ConflictException if user already exists', async () => {
       repository.findByUsername.mockResolvedValue(mockUser);
 
-      await expect(service.create(createUserDto, COMPANY_A)).rejects.toThrow(ConflictException);
+      await expect(service.create(createUserDto, COMPANY_A)).rejects.toThrow(
+        ConflictException,
+      );
       expect(repository.create).not.toHaveBeenCalled();
     });
   });
@@ -149,7 +161,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('1', COMPANY_B)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('1', COMPANY_B)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.findById).toHaveBeenCalledWith('1', COMPANY_B);
     });
   });
@@ -157,12 +171,21 @@ describe('UsersService', () => {
   describe('update', () => {
     it('should update user successfully within the company', async () => {
       repository.findById.mockResolvedValue(mockUser);
-      repository.update.mockResolvedValue({ ...mockUser, name: 'Updated Name' });
+      repository.update.mockResolvedValue({
+        ...mockUser,
+        name: 'Updated Name',
+      });
 
-      const result = await service.update('1', { name: 'Updated Name' }, COMPANY_A);
+      const result = await service.update(
+        '1',
+        { name: 'Updated Name' },
+        COMPANY_A,
+      );
 
       expect(repository.findById).toHaveBeenCalledWith('1', COMPANY_A);
-      expect(repository.update).toHaveBeenCalledWith('1', { name: 'Updated Name' });
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        name: 'Updated Name',
+      });
       expect(result).toEqual({ ...mockUser, name: 'Updated Name' });
     });
 
@@ -174,7 +197,9 @@ describe('UsersService', () => {
       await service.update('1', { password: 'newpassword' }, COMPANY_A);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('newpassword', 8);
-      expect(repository.update).toHaveBeenCalledWith('1', { password: 'newhashed' });
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        password: 'newhashed',
+      });
       expect(tokenRepository.deleteByUserId).toHaveBeenCalledWith('1');
     });
 
@@ -190,9 +215,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company without writing', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update('1', { password: 'x' }, COMPANY_B)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('1', { password: 'x' }, COMPANY_B),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.update).not.toHaveBeenCalled();
       expect(tokenRepository.deleteByUserId).not.toHaveBeenCalled();
     });
@@ -201,19 +226,26 @@ describe('UsersService', () => {
   describe('setPayment', () => {
     it('should set payment date successfully within the company', async () => {
       repository.findById.mockResolvedValue(mockUser);
-      repository.update.mockResolvedValue({ ...mockUser, lastPayment: new Date() });
+      repository.update.mockResolvedValue({
+        ...mockUser,
+        lastPayment: new Date(),
+      });
 
       const result = await service.setPayment('1', COMPANY_A);
 
       expect(repository.findById).toHaveBeenCalledWith('1', COMPANY_A);
-      expect(repository.update).toHaveBeenCalledWith('1', { lastPayment: expect.any(Date) });
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        lastPayment: expect.any(Date),
+      });
       expect(result.lastPayment).toBeInstanceOf(Date);
     });
 
     it('should throw NotFoundException for a user of another company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.setPayment('1', COMPANY_B)).rejects.toThrow(NotFoundException);
+      await expect(service.setPayment('1', COMPANY_B)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.update).not.toHaveBeenCalled();
     });
   });
@@ -221,7 +253,10 @@ describe('UsersService', () => {
   describe('remove', () => {
     it('should soft delete the user and revoke the refresh token', async () => {
       repository.findById.mockResolvedValue(mockUser);
-      repository.softDelete.mockResolvedValue({ ...mockUser, deletedAt: new Date() });
+      repository.softDelete.mockResolvedValue({
+        ...mockUser,
+        deletedAt: new Date(),
+      });
 
       await service.remove('1', COMPANY_A);
 
@@ -233,7 +268,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company without revoking', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.remove('1', COMPANY_B)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('1', COMPANY_B)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.softDelete).not.toHaveBeenCalled();
       expect(tokenRepository.deleteByUserId).not.toHaveBeenCalled();
     });
@@ -255,7 +292,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company without revoking', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.freeze('1', COMPANY_B)).rejects.toThrow(NotFoundException);
+      await expect(service.freeze('1', COMPANY_B)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.setFrozen).not.toHaveBeenCalled();
       expect(tokenRepository.deleteByUserId).not.toHaveBeenCalled();
     });
@@ -276,7 +315,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.unfreeze('1', COMPANY_B)).rejects.toThrow(NotFoundException);
+      await expect(service.unfreeze('1', COMPANY_B)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.setFrozen).not.toHaveBeenCalled();
     });
   });
@@ -297,9 +338,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException for a user of another company', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.assignPlan('1', { planId: null }, COMPANY_B)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.assignPlan('1', { planId: null }, COMPANY_B),
+      ).rejects.toThrow(NotFoundException);
       expect(repository.assignPlan).not.toHaveBeenCalled();
     });
   });
@@ -324,12 +365,22 @@ describe('UsersService', () => {
   describe('updateMyProfile', () => {
     it('should update cpf and email without touching the password or the token', async () => {
       repository.findByIdWithPassword.mockResolvedValue(mockUserWithPassword);
-      repository.update.mockResolvedValue({ ...mockUser, cpf: '000', email: 'a@b.com' });
+      repository.update.mockResolvedValue({
+        ...mockUser,
+        cpf: '000',
+        email: 'a@b.com',
+      });
 
-      const result = await service.updateMyProfile('1', { cpf: '000', email: 'a@b.com' });
+      const result = await service.updateMyProfile('1', {
+        cpf: '000',
+        email: 'a@b.com',
+      });
 
       expect(repository.findByIdWithPassword).toHaveBeenCalledWith('1');
-      expect(repository.update).toHaveBeenCalledWith('1', { cpf: '000', email: 'a@b.com' });
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        cpf: '000',
+        email: 'a@b.com',
+      });
       expect(tokenRepository.deleteByUserId).not.toHaveBeenCalled();
       expect(result).not.toHaveProperty('password');
     });
@@ -345,8 +396,13 @@ describe('UsersService', () => {
         newPassword: 'newpassword',
       });
 
-      expect(bcrypt.compare).toHaveBeenCalledWith('oldpassword', 'hashedpassword');
-      expect(repository.update).toHaveBeenCalledWith('1', { password: 'newhashed' });
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'oldpassword',
+        'hashedpassword',
+      );
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        password: 'newhashed',
+      });
       expect(tokenRepository.deleteByUserId).toHaveBeenCalledWith('1');
     });
 
@@ -355,7 +411,10 @@ describe('UsersService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
-        service.updateMyProfile('1', { currentPassword: 'wrong', newPassword: 'newpassword' }),
+        service.updateMyProfile('1', {
+          currentPassword: 'wrong',
+          newPassword: 'newpassword',
+        }),
       ).rejects.toThrow(BadRequestException);
       expect(repository.update).not.toHaveBeenCalled();
       expect(tokenRepository.deleteByUserId).not.toHaveBeenCalled();
@@ -364,7 +423,9 @@ describe('UsersService', () => {
     it('should throw NotFoundException if the user does not exist', async () => {
       repository.findByIdWithPassword.mockResolvedValue(null);
 
-      await expect(service.updateMyProfile('1', {})).rejects.toThrow(NotFoundException);
+      await expect(service.updateMyProfile('1', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

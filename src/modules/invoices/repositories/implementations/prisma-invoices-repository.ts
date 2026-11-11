@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { IInvoicesRepository, InvoiceScope, InvoiceWithPlan } from '../IInvoices-repository';
+import {
+  IInvoicesRepository,
+  InvoiceScope,
+  InvoiceWithPlan,
+} from '../IInvoices-repository';
 import { Invoice, InvoiceStatus, Prisma } from '@prisma/client';
 
 const scopeWhere = (scope: InvoiceScope): Prisma.InvoiceWhereInput =>
-  'userId' in scope ? { userId: scope.userId } : { user: { companyId: scope.companyId } };
+  'userId' in scope
+    ? { userId: scope.userId }
+    : { user: { companyId: scope.companyId } };
 
 @Injectable()
 export class InvoicesRepository implements IInvoicesRepository {
@@ -28,7 +34,10 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async findScopedById(id: string, scope: InvoiceScope): Promise<InvoiceWithPlan | null> {
+  async findScopedById(
+    id: string,
+    scope: InvoiceScope,
+  ): Promise<InvoiceWithPlan | null> {
     return this.prisma.invoice.findFirst({
       where: { id, ...scopeWhere(scope) },
       include: { plan: true },
@@ -43,7 +52,10 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async existsForUserInMonth(userId: string, referenceMonth: string): Promise<boolean> {
+  async existsForUserInMonth(
+    userId: string,
+    referenceMonth: string,
+  ): Promise<boolean> {
     const count = await this.prisma.invoice.count({
       where: { userId, referenceMonth },
     });
@@ -69,7 +81,11 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async updateStatus(id: string, status: InvoiceStatus, paidAt?: Date): Promise<Invoice> {
+  async updateStatus(
+    id: string,
+    status: InvoiceStatus,
+    paidAt?: Date,
+  ): Promise<Invoice> {
     return this.prisma.invoice.update({
       where: { id },
       data: {

@@ -1,4 +1,4 @@
-import request = require('supertest');
+import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { WorkoutsController } from '@modules/workouts/controllers/workouts.controller';
 import { WorkoutsService } from '@modules/workouts/services/workouts.service';
@@ -6,11 +6,28 @@ import { IWorkoutsRepository } from '@modules/workouts/repositories/IWorkouts-re
 import { ExercisesController } from '@modules/exercises/controllers/exercises.controller';
 import { ExercisesService } from '@modules/exercises/services/exercises.service';
 import { IExercisesRepository } from '@modules/exercises/repositories/IExercises-repository';
-import { bearer, createTestApp, makeUser, repoMock, RepoMock, TestApp } from './http-harness';
+import {
+  bearer,
+  createTestApp,
+  makeUser,
+  repoMock,
+  RepoMock,
+  TestApp,
+} from './http-harness';
 
 const CO = 'company-1';
-const admin = makeUser({ id: 'admin-1', username: 'boss', role: 'admin', companyId: CO });
-const client = makeUser({ id: 'client-1', username: 'aluno', role: 'client', companyId: CO });
+const admin = makeUser({
+  id: 'admin-1',
+  username: 'boss',
+  role: 'admin',
+  companyId: CO,
+});
+const client = makeUser({
+  id: 'client-1',
+  username: 'aluno',
+  role: 'client',
+  companyId: CO,
+});
 
 const SHEET_ID = '3f1c6a1e-8d2b-4c3a-9e7f-1a2b3c4d5e01';
 const WORKOUT_ID = '3f1c6a1e-8d2b-4c3a-9e7f-1a2b3c4d5e02';
@@ -43,7 +60,10 @@ describe('WorkoutsController over HTTP', () => {
     );
     testApp = await createTestApp({
       controllers: [WorkoutsController],
-      providers: [WorkoutsService, { provide: IWorkoutsRepository, useValue: repo }],
+      providers: [
+        WorkoutsService,
+        { provide: IWorkoutsRepository, useValue: repo },
+      ],
       users: [admin, client],
     });
     app = testApp.app;
@@ -68,10 +88,15 @@ describe('WorkoutsController over HTTP', () => {
 
   it('a client can read workouts, scoped to linked sheets', async () => {
     repo.findAll.mockResolvedValueOnce([workout]);
-    const res = await request(app.getHttpServer()).get('/workouts').set('Authorization', bearer(client));
+    const res = await request(app.getHttpServer())
+      .get('/workouts')
+      .set('Authorization', bearer(client));
     expect(res.status).toBe(200);
     expect(repo.findAll).toHaveBeenCalledWith({
-      workoutSheet: { companyId: CO, WorkoutSheetUsers: { some: { userId: client.id } } },
+      workoutSheet: {
+        companyId: CO,
+        WorkoutSheetUsers: { some: { userId: client.id } },
+      },
     });
   });
 
@@ -94,9 +119,20 @@ describe('WorkoutsController over HTTP', () => {
   it('a client cannot create, update or delete workouts (401)', async () => {
     const server = app.getHttpServer();
     const auth = bearer(client);
-    await request(server).post('/workouts').set('Authorization', auth).send({ name: 'x', workoutSheetId: SHEET_ID }).expect(401);
-    await request(server).patch(`/workouts/${WORKOUT_ID}`).set('Authorization', auth).send({ name: 'x' }).expect(401);
-    await request(server).delete(`/workouts/${WORKOUT_ID}`).set('Authorization', auth).expect(401);
+    await request(server)
+      .post('/workouts')
+      .set('Authorization', auth)
+      .send({ name: 'x', workoutSheetId: SHEET_ID })
+      .expect(401);
+    await request(server)
+      .patch(`/workouts/${WORKOUT_ID}`)
+      .set('Authorization', auth)
+      .send({ name: 'x' })
+      .expect(401);
+    await request(server)
+      .delete(`/workouts/${WORKOUT_ID}`)
+      .set('Authorization', auth)
+      .expect(401);
     expect(repo.create).not.toHaveBeenCalled();
   });
 
@@ -145,14 +181,18 @@ describe('WorkoutsController over HTTP', () => {
 
   it('DELETE /workouts/:id deletes a workout of the gym', async () => {
     repo.findById.mockResolvedValueOnce(workout);
-    const res = await request(app.getHttpServer()).delete(`/workouts/${WORKOUT_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .delete(`/workouts/${WORKOUT_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(200);
     expect(repo.deleteById).toHaveBeenCalledWith(WORKOUT_ID);
   });
 
   it('DELETE /workouts/:id answers 404 for an unknown workout', async () => {
     repo.findById.mockResolvedValueOnce(null);
-    const res = await request(app.getHttpServer()).delete(`/workouts/${WORKOUT_ID}`).set('Authorization', bearer(admin));
+    const res = await request(app.getHttpServer())
+      .delete(`/workouts/${WORKOUT_ID}`)
+      .set('Authorization', bearer(admin));
     expect(res.status).toBe(404);
     expect(repo.deleteById).not.toHaveBeenCalled();
   });
@@ -174,7 +214,10 @@ describe('ExercisesController over HTTP', () => {
     );
     testApp = await createTestApp({
       controllers: [ExercisesController],
-      providers: [ExercisesService, { provide: IExercisesRepository, useValue: repo }],
+      providers: [
+        ExercisesService,
+        { provide: IExercisesRepository, useValue: repo },
+      ],
       users: [admin, client],
     });
     app = testApp.app;
@@ -193,17 +236,25 @@ describe('ExercisesController over HTTP', () => {
     await request(server).get('/exercises').expect(401);
     await request(server).post('/exercises').send({}).expect(401);
     await request(server).get(`/exercises/${EXERCISE_ID}`).expect(401);
-    await request(server).patch(`/exercises/${EXERCISE_ID}`).send({}).expect(401);
+    await request(server)
+      .patch(`/exercises/${EXERCISE_ID}`)
+      .send({})
+      .expect(401);
     await request(server).delete(`/exercises/${EXERCISE_ID}`).expect(401);
   });
 
   it('a client lists exercises scoped to linked sheets', async () => {
     repo.findAll.mockResolvedValueOnce([exercise]);
-    const res = await request(app.getHttpServer()).get('/exercises').set('Authorization', bearer(client));
+    const res = await request(app.getHttpServer())
+      .get('/exercises')
+      .set('Authorization', bearer(client));
     expect(res.status).toBe(200);
     expect(repo.findAll).toHaveBeenCalledWith({
       workout: {
-        workoutSheet: { companyId: CO, WorkoutSheetUsers: { some: { userId: client.id } } },
+        workoutSheet: {
+          companyId: CO,
+          WorkoutSheetUsers: { some: { userId: client.id } },
+        },
       },
     });
   });
@@ -219,9 +270,20 @@ describe('ExercisesController over HTTP', () => {
   it('a client cannot create, update or delete exercises (401)', async () => {
     const server = app.getHttpServer();
     const auth = bearer(client);
-    await request(server).post('/exercises').set('Authorization', auth).send({}).expect(401);
-    await request(server).patch(`/exercises/${EXERCISE_ID}`).set('Authorization', auth).send({}).expect(401);
-    await request(server).delete(`/exercises/${EXERCISE_ID}`).set('Authorization', auth).expect(401);
+    await request(server)
+      .post('/exercises')
+      .set('Authorization', auth)
+      .send({})
+      .expect(401);
+    await request(server)
+      .patch(`/exercises/${EXERCISE_ID}`)
+      .set('Authorization', auth)
+      .send({})
+      .expect(401);
+    await request(server)
+      .delete(`/exercises/${EXERCISE_ID}`)
+      .set('Authorization', auth)
+      .expect(401);
   });
 
   it('POST /exercises creates an exercise in a workout of the gym', async () => {
@@ -239,7 +301,10 @@ describe('ExercisesController over HTTP', () => {
         workoutId: WORKOUT_ID,
       });
     expect(res.status).toBe(201);
-    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Supino' }), WORKOUT_ID);
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Supino' }),
+      WORKOUT_ID,
+    );
   });
 
   it('POST /exercises answers 404 for a workout of another gym', async () => {
@@ -247,7 +312,14 @@ describe('ExercisesController over HTTP', () => {
     const res = await request(app.getHttpServer())
       .post('/exercises')
       .set('Authorization', bearer(admin))
-      .send({ name: 'Supino', reps: 10, sets: 3, muscleGroup: 'CHEST', restPeriod: 60, workoutId: WORKOUT_ID });
+      .send({
+        name: 'Supino',
+        reps: 10,
+        sets: 3,
+        muscleGroup: 'CHEST',
+        restPeriod: 60,
+        workoutId: WORKOUT_ID,
+      });
     expect(res.status).toBe(404);
     expect(repo.create).not.toHaveBeenCalled();
   });

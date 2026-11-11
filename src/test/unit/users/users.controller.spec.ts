@@ -14,7 +14,12 @@ describe('UsersController', () => {
   const COMPANY_A = 'company-a';
 
   const adminReq = {
-    user: { id: 'admin-1', username: 'admin', role: 'admin', companyId: COMPANY_A } as AuthUser,
+    user: {
+      id: 'admin-1',
+      username: 'admin',
+      role: 'admin',
+      companyId: COMPANY_A,
+    } as AuthUser,
   };
 
   // Services return users without the password hash.
@@ -51,9 +56,18 @@ describe('UsersController', () => {
 
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock-token'),
-    verify: jest.fn().mockReturnValue({ id: '1', username: 'test', role: 'admin' }),
-    verifyAsync: jest.fn().mockResolvedValue({ id: '1', username: 'test', role: 'admin' }),
-    decode: jest.fn().mockReturnValue({ id: '1', username: 'test', role: 'admin', companyId: COMPANY_A }),
+    verify: jest
+      .fn()
+      .mockReturnValue({ id: '1', username: 'test', role: 'admin' }),
+    verifyAsync: jest
+      .fn()
+      .mockResolvedValue({ id: '1', username: 'test', role: 'admin' }),
+    decode: jest.fn().mockReturnValue({
+      id: '1',
+      username: 'test',
+      role: 'admin',
+      companyId: COMPANY_A,
+    }),
   };
 
   const mockAuthService = {
@@ -151,7 +165,11 @@ describe('UsersController', () => {
 
       const result = await controller.update(adminReq, '1', updateUserDto);
 
-      expect(service.update).toHaveBeenCalledWith('1', updateUserDto, COMPANY_A);
+      expect(service.update).toHaveBeenCalledWith(
+        '1',
+        updateUserDto,
+        COMPANY_A,
+      );
       expect(result).toEqual(updatedUser);
     });
   });
@@ -174,7 +192,11 @@ describe('UsersController', () => {
 
       await controller.assignPlan(adminReq, '1', { planId: null });
 
-      expect(service.assignPlan).toHaveBeenCalledWith('1', { planId: null }, COMPANY_A);
+      expect(service.assignPlan).toHaveBeenCalledWith(
+        '1',
+        { planId: null },
+        COMPANY_A,
+      );
     });
   });
 

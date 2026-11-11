@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { ExerciseUpdateData, IExercisesRepository } from '../IExercises-repository';
+import {
+  ExerciseUpdateData,
+  IExercisesRepository,
+} from '../IExercises-repository';
 import { CreateExerciseDto } from '../../dtos/exerciseDTO';
 import { Exercise, MuscleGroup, Prisma } from '@prisma/client';
 
@@ -42,11 +45,17 @@ export class ExercisesRepository implements IExercisesRepository {
     return this.prisma.exercise.findMany({ where });
   }
 
-  async findById(id: string, where: Prisma.ExerciseWhereInput): Promise<Exercise | null> {
+  async findById(
+    id: string,
+    where: Prisma.ExerciseWhereInput,
+  ): Promise<Exercise | null> {
     return this.prisma.exercise.findFirst({ where: { AND: [{ id }, where] } });
   }
 
-  async workoutExistsInCompany(workoutId: string, companyId: string): Promise<boolean> {
+  async workoutExistsInCompany(
+    workoutId: string,
+    companyId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.workout.count({
       where: { id: workoutId, workoutSheet: { companyId } },
     });

@@ -5,7 +5,9 @@ import { CreateUserDto } from '../dtos/userDTO';
 export type SafeUser = Omit<User, 'password'>;
 
 export abstract class IUsersRepository {
-  abstract create(user: CreateUserDto & { companyId: string }): Promise<SafeUser>;
+  abstract create(
+    user: CreateUserDto & { companyId: string },
+  ): Promise<SafeUser>;
   abstract update(id: string, user: Partial<User>): Promise<SafeUser>;
   /** Lists the users of one company (soft-deleted users are left out). */
   abstract findAllByCompany(companyId: string): Promise<SafeUser[]>;
