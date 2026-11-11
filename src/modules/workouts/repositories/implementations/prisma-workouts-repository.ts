@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma, Workout } from '@prisma/client';
 import { PrismaService } from '@modules/prisma/prisma.service';
 import { IWorkoutsRepository } from '../IWorkouts-repository';
 import { CreateWorkoutDto, UpdateWorkoutDto } from '../../dtos/workoutDTO';
-import { Workout } from '@prisma/client';
 
 @Injectable()
 export class WorkoutsRepository implements IWorkoutsRepository {
@@ -19,12 +19,17 @@ export class WorkoutsRepository implements IWorkoutsRepository {
     });
   }
 
-  async findAll(): Promise<Workout[]> {
-    return this.prisma.workout.findMany();
+  async findAll(where: Prisma.WorkoutWhereInput): Promise<Workout[]> {
+    return this.prisma.workout.findMany({ where });
   }
 
-  async findById(id: string): Promise<Workout | null> {
-    return this.prisma.workout.findUnique({ where: { id } });
+  async findById(id: string, where: Prisma.WorkoutWhereInput): Promise<Workout | null> {
+    return this.prisma.workout.findFirst({ where: { AND: [{ id }, where] } });
+  }
+
+  async workoutSheetExistsInCompany(workoutSheetId: string, companyId: string): Promise<boolean> {
+    const count = await this.prisma.workoutSheet.count({ where: { id: workoutSheetId, companyId } });
+    return count > 0;
   }
 
   async deleteById(id: string): Promise<void> {
