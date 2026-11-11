@@ -84,7 +84,8 @@ export class PaymentsService {
       return { ok: true };
     }
 
-    const paymentId = String(body.data?.id);
+    const rawId = body.data?.id;
+    const paymentId = rawId === undefined || rawId === null ? '' : String(rawId);
     if (!paymentId) {
       this.logger.warn(`[webhook] data.id ausente no payload`);
       return { ok: true };
@@ -136,7 +137,8 @@ export class PaymentsService {
   private validateSignature(body: WebhookBody, headers: Record<string, string | undefined>) {
     const xSignature = headers['x-signature'];
     const xRequestId = headers['x-request-id'];
-    if (!xSignature) return;
+    // With a secret configured, an unsigned notification is rejected, never trusted.
+    if (!xSignature) throw new UnauthorizedException('Webhook signature missing');
 
     const parts = xSignature.split(',');
     const ts = parts.find((p) => p.startsWith('ts='))?.split('=')[1];
@@ -149,6 +151,10 @@ export class PaymentsService {
     hmac.update(signedTemplate);
     const hash = hmac.digest('hex');
 
-    if (hash !== v1) throw new UnauthorizedException('Webhook signature mismatch');
+    const expected = Buffer.from(hash, 'hex');
+    const received = Buffer.from(v1, 'hex');
+    if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
+      throw new UnauthorizedException('Webhook signature mismatch');
+    }
   }
 }

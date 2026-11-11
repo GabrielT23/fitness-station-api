@@ -129,10 +129,25 @@ describe('PaymentsService (PIX through FakePixProvider)', () => {
 
   describe('handleWebhook', () => {
     const approvedBody = (paymentId: number) => ({ type: 'payment', data: { id: String(paymentId) } });
+    const sign = (dataId: string) => signedHeaders(dataId, 'req-1', '1700000000');
+
+    it('rejects an unsigned notification when the webhook secret is configured', async () => {
+      const spy = jest.spyOn(pix, 'getPayment');
+      await expect(service.handleWebhook(approvedBody(1), {})).rejects.toThrow(UnauthorizedException);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('answers ok without calling the provider when data.id is missing', async () => {
+      const spy = jest.spyOn(pix, 'getPayment');
+      const body = { type: 'payment', data: {} };
+      const result = await service.handleWebhook(body, sign('undefined'));
+      expect(result).toEqual({ ok: true });
+      expect(spy).not.toHaveBeenCalled();
+    });
 
     it('ignores notifications that are not about a payment', async () => {
       const spy = jest.spyOn(pix, 'getPayment');
-      const result = await service.handleWebhook({ type: 'merchant_order', data: { id: '1' } }, {});
+      const result = await service.handleWebhook({ type: 'merchant_order', data: { id: '1' } }, sign('1'));
       expect(result).toEqual({ ok: true });
       expect(spy).not.toHaveBeenCalled();
     });
@@ -142,7 +157,7 @@ describe('PaymentsService (PIX through FakePixProvider)', () => {
       pix.setStatus(paymentId, 'approved', 'accredited');
       prisma.invoice.findFirst.mockResolvedValue({ ...invoice, mpPaymentId: String(paymentId) });
 
-      const result = await service.handleWebhook(approvedBody(paymentId), {});
+      const result = await service.handleWebhook(approvedBody(paymentId), sign(String(paymentId)));
 
       expect(result).toEqual({ ok: true });
       expect(prisma.invoice.findFirst).toHaveBeenCalledWith({ where: { mpPaymentId: String(paymentId) } });
@@ -156,7 +171,7 @@ describe('PaymentsService (PIX through FakePixProvider)', () => {
     it('does nothing while the payment is still pending', async () => {
       const { paymentId } = await service.createPixPayment('inv-1', 'user-1', dto);
       prisma.invoice.update.mockClear();
-      const result = await service.handleWebhook(approvedBody(paymentId), {});
+      const result = await service.handleWebhook(approvedBody(paymentId), sign(String(paymentId)));
       expect(result).toEqual({ ok: true });
       expect(prisma.invoice.findFirst).not.toHaveBeenCalled();
       expect(prisma.invoice.update).not.toHaveBeenCalled();
@@ -169,14 +184,14 @@ describe('PaymentsService (PIX through FakePixProvider)', () => {
       prisma.invoice.update.mockClear();
       prisma.invoice.findFirst.mockResolvedValue({ ...invoice, status: 'PAID' });
 
-      await service.handleWebhook(approvedBody(paymentId), {});
+      await service.handleWebhook(approvedBody(paymentId), sign(String(paymentId)));
 
       expect(prisma.invoice.update).not.toHaveBeenCalled();
       expect(gateway.emitPaymentConfirmed).not.toHaveBeenCalled();
     });
 
     it('answers ok when the provider lookup fails', async () => {
-      const result = await service.handleWebhook(approvedBody(999), {});
+      const result = await service.handleWebhook(approvedBody(999), sign(String(999)));
       expect(result).toEqual({ ok: true });
       expect(prisma.invoice.findFirst).not.toHaveBeenCalled();
     });

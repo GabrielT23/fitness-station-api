@@ -11,6 +11,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { configuration } from '@config/configuration';
+import { PrismaService } from '@modules/prisma/prisma.service';
 
 @Injectable()
 @WebSocketGateway({ cors: { origin: '*' }, pingInterval: 8000, pingTimeout: 20000 })
@@ -20,7 +21,10 @@ export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private readonly logger = new Logger(PaymentsGateway.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   handleConnection(client: Socket) {
     const token = (client.handshake.auth?.token as string)?.replace('Bearer ', '');
@@ -34,6 +38,7 @@ export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     try {
       const payload = this.jwtService.verify(token, { secret: configuration().jwtSecret });
+      client.data.userId = String(payload.id);
       this.logger.log(`[connect] socket.id=${client.id} autenticado como userId=${payload.id}`);
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
@@ -47,10 +52,26 @@ export class PaymentsGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   @SubscribeMessage('join_invoice')
-  handleJoin(@ConnectedSocket() client: Socket, @MessageBody() invoiceId: string) {
+  async handleJoin(@ConnectedSocket() client: Socket, @MessageBody() invoiceId: string) {
+    if (!(await this.canWatchInvoice(client.data.userId, invoiceId))) {
+      this.logger.warn(`[join_invoice] socket.id=${client.id} negado para invoice:${invoiceId}`);
+      return;
+    }
     client.join(`invoice:${invoiceId}`);
     const rooms = Array.from(client.rooms).join(', ');
     this.logger.log(`[join_invoice] socket.id=${client.id} entrou na sala invoice:${invoiceId} | salas: [${rooms}]`);
+  }
+
+  /** The invoice owner, or an admin of the owner's gym, may follow its payment. */
+  async canWatchInvoice(userId: unknown, invoiceId: unknown): Promise<boolean> {
+    if (typeof userId !== 'string' || typeof invoiceId !== 'string') return false;
+    const [user, invoice] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.prisma.invoice.findUnique({ where: { id: invoiceId }, include: { user: true } }),
+    ]);
+    if (!user || user.deletedAt || user.isFrozen || !invoice) return false;
+    if (invoice.userId === user.id) return true;
+    return user.role === 'admin' && invoice.user.companyId === user.companyId;
   }
 
   emitPaymentConfirmed(invoiceId: string) {
