@@ -19,10 +19,17 @@ export class CreateUserDto {
   @IsEnum(Role)
   @IsOptional()
   role: Role;
+
+  /**
+   * Accepted for compatibility with the web client but IGNORED: the company
+   * always comes from the authenticated admin (see UsersService.create).
+   */
+  @IsUUID()
+  @IsOptional()
+  companyId?: string;
 }
 
-/** `companyId` is never read from the body: it always comes from the authenticated admin. */
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['companyId'] as const)) {}
 
 export class AssignPlanDto {
   @IsUUID()
