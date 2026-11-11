@@ -1,24 +1,25 @@
+// Required fields are set by the ValidationPipe from the validated request body.
 import { OmitType, PartialType } from '@nestjs/mapped-types';
-import { IsString, IsEmail, IsEnum, IsNotEmpty, isObject, ValidateNested, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { Role } from '@prisma/client';
 
 
 export class CreateUserDto {
   @IsString({ message: 'Nome inválido' })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
-  username: string;
+  username!: string;
 
   @IsString({ message: 'Nome inválido' })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
-  name: string
+  name!: string
 
   @IsString()
   @IsNotEmpty({ message: 'senha é obrigatória' })
-  password: string;
+  password!: string;
 
   @IsEnum(Role)
   @IsOptional()
-  role: Role;
+  role?: Role;
 
   /**
    * Accepted for compatibility with the web client but IGNORED: the company

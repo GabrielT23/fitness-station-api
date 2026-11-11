@@ -110,7 +110,7 @@ describe('UsersService', () => {
       repository.create.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedpassword');
 
-      await service.create({ ...createUserDto, companyId: COMPANY_B } as any, COMPANY_A);
+      await service.create({ ...createUserDto, companyId: COMPANY_B }, COMPANY_A);
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ companyId: COMPANY_A }),

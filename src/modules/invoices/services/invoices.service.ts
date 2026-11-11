@@ -107,7 +107,7 @@ export class InvoicesService {
    * gym's clients are considered; without it (monthly cron job) every gym is.
    */
   async generateMonthly(
-    dto: GenerateMonthlyInvoicesDto,
+    _dto: GenerateMonthlyInvoicesDto,
     companyId?: string,
   ): Promise<{ created: number; skipped: number }> {
     const usersWithPlans = await this.prisma.user.findMany({

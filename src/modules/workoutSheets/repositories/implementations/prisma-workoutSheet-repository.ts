@@ -11,7 +11,7 @@ const LINKED_USER_SELECT = { id: true, name: true, username: true } as const;
 export class WorkoutSheetsRepository implements IWorkoutSheetsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createWorkoutSheet(data: CreateWorkoutSheetDto): Promise<WorkoutSheet> {
+  async createWorkoutSheet(data: CreateWorkoutSheetDto & { companyId: string }): Promise<WorkoutSheet> {
     return this.prisma.workoutSheet.create({
       data: {
         name: data.name,
