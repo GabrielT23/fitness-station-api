@@ -75,7 +75,7 @@ export class WorkoutSheetsService {
     return this.workoutSheetsRepository.findAllWorkoutSheets(actor.companyId);
   }
 
-  async findAllByUserId(actor: AuthUser): Promise<any[]> {
+  async findAllByUserId(actor: AuthUser): Promise<WorkoutSheet[]> {
     const [sheets, user] = await Promise.all([
       this.workoutSheetsRepository.findAllWorkoutSheetsByUserId(actor.id, actor.companyId),
       this.prisma.user.findUnique({ where: { id: actor.id }, select: { activeWorkoutSheetId: true } }),

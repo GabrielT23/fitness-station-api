@@ -1,3 +1,4 @@
+// Required fields are set by the ValidationPipe from the validated request body.
 import {
   IsDateString,
   IsEnum,
@@ -14,28 +15,28 @@ import { InvoiceStatus } from '@prisma/client';
 export class CreateInvoiceDto {
   @IsUUID()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @IsUUID()
   @IsNotEmpty()
-  planId: string;
+  planId!: string;
 
   @IsNumber()
   @Min(0)
-  amount: number;
+  amount!: number;
 
   @IsDateString()
-  dueDate: string;
+  dueDate!: string;
 
   @IsString()
   @IsNotEmpty()
   @Matches(/^\d{4}-\d{2}$/, { message: 'referenceMonth deve estar no formato YYYY-MM' })
-  referenceMonth: string;
+  referenceMonth!: string;
 }
 
 export class UpdateInvoiceStatusDto {
   @IsEnum(InvoiceStatus)
-  status: InvoiceStatus;
+  status!: InvoiceStatus;
 }
 
 export class GenerateMonthlyInvoicesDto {

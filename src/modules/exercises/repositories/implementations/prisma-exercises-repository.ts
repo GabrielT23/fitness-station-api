@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { IExercisesRepository } from '../IExercises-repository';
-import { CreateExerciseDto, UpdateExerciseDto } from '../../dtos/exerciseDTO';
+import { ExerciseUpdateData, IExercisesRepository } from '../IExercises-repository';
+import { CreateExerciseDto } from '../../dtos/exerciseDTO';
 import { Exercise, MuscleGroup, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -24,14 +24,14 @@ export class ExercisesRepository implements IExercisesRepository {
     });
   }
 
-  async update(id: string, data: Partial<UpdateExerciseDto>): Promise<Exercise> {
+  async update(id: string, data: ExerciseUpdateData): Promise<Exercise> {
     return this.prisma.exercise.update({
       where: { id },
       data: {
         name: data.name,
         reps: data.reps,
         sets: data.sets,
-        muscleGroup: data.muscleGroup as MuscleGroup,
+        muscleGroup: data.muscleGroup,
         restPeriod: data.restPeriod,
         videoLink: data.videoLink,
       },

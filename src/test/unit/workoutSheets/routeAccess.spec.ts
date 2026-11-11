@@ -1,3 +1,4 @@
+import type { Type } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { WorkoutSheetsController } from '@modules/workoutSheets/controllers/workoutSheets.controller';
 import { WorkoutsController } from '@modules/workouts/controllers/workouts.controller';
@@ -12,14 +13,14 @@ import { RoleUser } from '@modules/auth/role.decorator';
 describe('route access', () => {
   const reflector = new Reflector();
 
-  function guardsOf(controller: any, handler?: Function): unknown[] {
+  function guardsOf(controller: Type<unknown>, handler?: object): unknown[] {
     return [
       ...(Reflect.getMetadata('__guards__', controller) ?? []),
       ...(handler ? Reflect.getMetadata('__guards__', handler) ?? [] : []),
     ];
   }
 
-  function expectRoutes(controller: any, expected: Record<string, 'admin' | 'client'>) {
+  function expectRoutes(controller: Type<unknown>, expected: Record<string, 'admin' | 'client'>) {
     for (const [method, role] of Object.entries(expected)) {
       const handler = controller.prototype[method];
       expect({ method, guarded: guardsOf(controller, handler).includes(AuthGuard) }).toEqual({ method, guarded: true });

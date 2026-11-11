@@ -14,8 +14,14 @@ export class UsersRepository implements IUsersRepository {
     return newUser;
   }
 
-  async update(id: string, user: Partial<User>): Promise<SafeUser> {
-    const { plan, invoices, WorkoutSheetUsers, workoutSheets, assessmentSheets, token, company, ...safeData } = user as any;
+  /** Relations are never written through a scalar update, so they are stripped if a caller passes them. */
+  async update(
+    id: string,
+    user: Partial<User> & Partial<Record<'plan' | 'invoices' | 'WorkoutSheetUsers' | 'workoutSheets' | 'assessmentSheets' | 'token' | 'company', unknown>>,
+  ): Promise<SafeUser> {
+    // The stripped keys are discarded on purpose; they only exist to be left out of safeData.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { plan, invoices, WorkoutSheetUsers, workoutSheets, assessmentSheets, token, company, ...safeData } = user;
     const userUpdate = await this.prisma.user.update({
       where: { id },
       data: safeData,
@@ -35,7 +41,7 @@ export class UsersRepository implements IUsersRepository {
           include: { plan: true },
         },
       },
-    }) as any;
+    });
   }
 
   async findById(id: string, companyId?: string): Promise<SafeUser | null> {

@@ -3,13 +3,13 @@ import { NotFoundException } from '@nestjs/common';
 import { WorkoutSheetsService } from '@modules/workoutSheets/services/workoutSheets.service';
 import { IWorkoutSheetsRepository } from '@modules/workoutSheets/repositories/IWorkoutSheets-repository';
 import { PrismaService } from '@modules/prisma/prisma.service';
+import type { CreateWorkoutSheetDto, UpdateWorkoutSheetDto } from '@modules/workoutSheets/dtos/workoutSheetDto';
 import type { AuthUser } from '@modules/auth/providers/auth.guard';
-import { WorkoutType } from '@prisma/client';
+import { Exercise, WorkoutType } from '@prisma/client';
 
 describe('WorkoutSheetsService', () => {
   let service: WorkoutSheetsService;
   let repository: jest.Mocked<IWorkoutSheetsRepository>;
-  let prisma: any;
 
   const admin: AuthUser = { id: 'admin1', username: 'admin', role: 'admin', companyId: 'company1' };
   const client: AuthUser = { id: 'client1', username: 'client', role: 'client', companyId: 'company1' };
@@ -78,7 +78,7 @@ describe('WorkoutSheetsService', () => {
 
   describe('create', () => {
     it('should create a workout sheet with users and workouts', async () => {
-      const createWorkoutSheetDto = {
+      const createWorkoutSheetDto: CreateWorkoutSheetDto = {
         name: 'Test Workout Sheet',
         type: 'STRENGTH',
         isActive: true,
@@ -103,9 +103,9 @@ describe('WorkoutSheetsService', () => {
       repository.createWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
       repository.linkUserToWorkoutSheet.mockResolvedValue(undefined);
       repository.createWorkout.mockResolvedValue(mockWorkout);
-      repository.createExercise.mockResolvedValue({} as any);
+      repository.createExercise.mockResolvedValue({} as Exercise);
 
-      const result = await service.create(createWorkoutSheetDto as any, admin);
+      const result = await service.create(createWorkoutSheetDto, admin);
 
       expect(repository.findUserIdsInCompany).toHaveBeenCalledWith(['user1'], 'company1');
       expect(repository.createWorkoutSheet).toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('WorkoutSheetsService', () => {
       repository.createWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
 
       await service.create(
-        { name: 'Sheet', type: 'STRENGTH', isActive: true, companyId: 'other-company' } as any,
+        { name: 'Sheet', type: 'STRENGTH', isActive: true, companyId: 'other-company' },
         admin,
       );
 
@@ -132,7 +132,7 @@ describe('WorkoutSheetsService', () => {
       repository.findUserIdsInCompany.mockResolvedValue([]);
 
       await expect(
-        service.create({ name: 'Sheet', type: 'STRENGTH', isActive: true, users: [{ id: 'foreign' }] } as any, admin),
+        service.create({ name: 'Sheet', type: 'STRENGTH', isActive: true, users: [{ id: 'foreign' }] }, admin),
       ).rejects.toThrow(NotFoundException);
 
       expect(repository.createWorkoutSheet).not.toHaveBeenCalled();
@@ -140,7 +140,7 @@ describe('WorkoutSheetsService', () => {
     });
 
     it('should create a workout sheet without users and workouts', async () => {
-      const createWorkoutSheetDto = {
+      const createWorkoutSheetDto: CreateWorkoutSheetDto = {
         name: 'Test Workout Sheet',
         type: 'STRENGTH',
         isActive: true,
@@ -148,7 +148,7 @@ describe('WorkoutSheetsService', () => {
 
       repository.createWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
 
-      const result = await service.create(createWorkoutSheetDto as any, admin);
+      const result = await service.create(createWorkoutSheetDto, admin);
 
       expect(repository.createWorkoutSheet).toHaveBeenCalled();
       expect(repository.linkUserToWorkoutSheet).not.toHaveBeenCalled();
@@ -184,7 +184,7 @@ describe('WorkoutSheetsService', () => {
       repository.workoutSheetExistsInCompany.mockResolvedValue(true);
       repository.updateWorkoutSheet.mockResolvedValue(mockWorkoutSheet);
 
-      await service.update('1', { name: 'x', companyId: 'other-company' } as any, admin);
+      await service.update('1', { name: 'x', companyId: 'other-company' } satisfies UpdateWorkoutSheetDto, admin);
 
       const [, data] = repository.updateWorkoutSheet.mock.calls[0];
       expect(data).not.toHaveProperty('companyId');
