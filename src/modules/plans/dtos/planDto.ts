@@ -1,18 +1,27 @@
-import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+// Required fields are set by the ValidationPipe from the validated request body.
+import {
+  IsBoolean,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 
 export class CreatePlanDto {
   @IsString()
   @IsNotEmpty({ message: 'Nome é obrigatório' })
-  name: string;
+  name!: string;
 
   @IsNumber()
   @Min(0)
-  value: number;
+  value!: number;
 
   @IsInt()
   @Min(0)
-  toleranceDays: number;
+  toleranceDays!: number;
 
   @IsBoolean()
   @IsOptional()

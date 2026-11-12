@@ -4,9 +4,10 @@ import { CompaniesController } from './controllers/companies.controller';
 import { CompaniesService } from './services/companies.service';
 import { companiesRepositoryProvider } from './repositories/companies-repository.provider';
 import { PrismaModule } from '@modules/prisma/prisma.module';
+import { AuthModule } from '@modules/auth';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [CompaniesController],
   providers: [CompaniesService, companiesRepositoryProvider],
   exports: [companiesRepositoryProvider],

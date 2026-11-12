@@ -4,20 +4,31 @@ import { UsersService } from '@modules/users/services/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from '@modules/auth/services/auth.service';
-import { AuthGuard } from '@modules/auth/providers/auth.guard';
+import { AuthGuard, AuthUser } from '@modules/auth/providers/auth.guard';
 import { Role } from '@prisma/client';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let service: jest.Mocked<UsersService>;
 
+  const COMPANY_A = 'company-a';
+
+  const adminReq = {
+    user: {
+      id: 'admin-1',
+      username: 'admin',
+      role: 'admin',
+      companyId: COMPANY_A,
+    } as AuthUser,
+  };
+
+  // Services return users without the password hash.
   const mockUser = {
     id: '1',
     username: 'testuser',
     name: 'Test User',
-    password: 'hashedpassword',
     role: Role.client,
-    companyId: '1',
+    companyId: COMPANY_A,
     planId: null,
     cpf: null,
     email: null,
@@ -35,14 +46,28 @@ describe('UsersController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     setPayment: jest.fn(),
+    assignPlan: jest.fn(),
+    freeze: jest.fn(),
+    unfreeze: jest.fn(),
     remove: jest.fn(),
+    getMe: jest.fn(),
+    updateMyProfile: jest.fn(),
   };
 
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock-token'),
-    verify: jest.fn().mockReturnValue({ id: '1', username: 'test', role: 'admin' }),
-    verifyAsync: jest.fn().mockResolvedValue({ id: '1', username: 'test', role: 'admin' }),
-    decode: jest.fn().mockReturnValue({ id: '1', username: 'test', role: 'admin', companyId: '1' }),
+    verify: jest
+      .fn()
+      .mockReturnValue({ id: '1', username: 'test', role: 'admin' }),
+    verifyAsync: jest
+      .fn()
+      .mockResolvedValue({ id: '1', username: 'test', role: 'admin' }),
+    decode: jest.fn().mockReturnValue({
+      id: '1',
+      username: 'test',
+      role: 'admin',
+      companyId: COMPANY_A,
+    }),
   };
 
   const mockAuthService = {
@@ -92,79 +117,109 @@ describe('UsersController', () => {
   });
 
   describe('create', () => {
-    it('should create a user', async () => {
+    it('should create a user in the company of the admin', async () => {
       const createUserDto = {
         username: 'testuser',
         name: 'Test User',
         password: 'password123',
         role: Role.client,
-        companyId: '1',
       };
 
       service.create.mockResolvedValue(mockUser);
 
-      const result = await controller.create(createUserDto);
+      const result = await controller.create(adminReq, createUserDto);
 
-      expect(service.create).toHaveBeenCalledWith(createUserDto);
+      expect(service.create).toHaveBeenCalledWith(createUserDto, COMPANY_A);
       expect(result).toEqual(mockUser);
     });
   });
 
   describe('findAll', () => {
-    it('should return all users', async () => {
-      service.findAll.mockResolvedValue([{ ...mockUser, password: 'hashed' } as any]);
+    it('should return the users of the admin company', async () => {
+      service.findAll.mockResolvedValue([mockUser]);
 
-      const result = await controller.findAll();
+      const result = await controller.findAll(adminReq);
 
-      expect(service.findAll).toHaveBeenCalled();
-      expect(result).toEqual([{ ...mockUser, password: 'hashed' }]);
+      expect(service.findAll).toHaveBeenCalledWith(COMPANY_A);
+      expect(result).toEqual([mockUser]);
     });
   });
 
   describe('findOne', () => {
-    it('should return a user by id', async () => {
+    it('should return a user by id scoped to the admin company', async () => {
       service.findOne.mockResolvedValue(mockUser);
 
-      const result = await controller.findOne('1');
+      const result = await controller.findOne(adminReq, '1');
 
-      expect(service.findOne).toHaveBeenCalledWith('1');
+      expect(service.findOne).toHaveBeenCalledWith('1', COMPANY_A);
       expect(result).toEqual(mockUser);
     });
   });
 
   describe('update', () => {
-    it('should update a user', async () => {
+    it('should update a user scoped to the admin company', async () => {
       const updateUserDto = { name: 'Updated Name' };
       const updatedUser = { ...mockUser, name: 'Updated Name' };
 
       service.update.mockResolvedValue(updatedUser);
 
-      const result = await controller.update('1', updateUserDto);
+      const result = await controller.update(adminReq, '1', updateUserDto);
 
-      expect(service.update).toHaveBeenCalledWith('1', updateUserDto);
+      expect(service.update).toHaveBeenCalledWith(
+        '1',
+        updateUserDto,
+        COMPANY_A,
+      );
       expect(result).toEqual(updatedUser);
     });
   });
 
   describe('setPayment', () => {
-    it('should set payment for a user', async () => {
+    it('should set payment for a user scoped to the admin company', async () => {
       const userWithPayment = { ...mockUser, lastPayment: new Date() };
       service.setPayment.mockResolvedValue(userWithPayment);
 
-      const result = await controller.setPayment('1');
+      const result = await controller.setPayment(adminReq, '1');
 
-      expect(service.setPayment).toHaveBeenCalledWith('1');
+      expect(service.setPayment).toHaveBeenCalledWith('1', COMPANY_A);
       expect(result).toEqual(userWithPayment);
     });
   });
 
+  describe('assignPlan', () => {
+    it('should assign a plan scoped to the admin company', async () => {
+      service.assignPlan.mockResolvedValue({ ...mockUser, planId: null });
+
+      await controller.assignPlan(adminReq, '1', { planId: null });
+
+      expect(service.assignPlan).toHaveBeenCalledWith(
+        '1',
+        { planId: null },
+        COMPANY_A,
+      );
+    });
+  });
+
+  describe('freeze / unfreeze', () => {
+    it('should freeze and unfreeze a user scoped to the admin company', async () => {
+      service.freeze.mockResolvedValue({ ...mockUser, isFrozen: true });
+      service.unfreeze.mockResolvedValue({ ...mockUser, isFrozen: false });
+
+      await controller.freeze(adminReq, '1');
+      await controller.unfreeze(adminReq, '1');
+
+      expect(service.freeze).toHaveBeenCalledWith('1', COMPANY_A);
+      expect(service.unfreeze).toHaveBeenCalledWith('1', COMPANY_A);
+    });
+  });
+
   describe('remove', () => {
-    it('should remove a user', async () => {
-      service.remove.mockResolvedValue(undefined);
+    it('should remove a user scoped to the admin company', async () => {
+      service.remove.mockResolvedValue({ ...mockUser, deletedAt: new Date() });
 
-      await controller.remove('1');
+      await controller.remove(adminReq, '1');
 
-      expect(service.remove).toHaveBeenCalledWith('1');
+      expect(service.remove).toHaveBeenCalledWith('1', COMPANY_A);
     });
   });
 });

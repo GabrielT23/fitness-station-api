@@ -1,7 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { IInvoicesRepository, InvoiceWithPlan } from '../IInvoices-repository';
-import { Invoice, InvoiceStatus } from '@prisma/client';
+import {
+  IInvoicesRepository,
+  InvoiceScope,
+  InvoiceWithPlan,
+} from '../IInvoices-repository';
+import { Invoice, InvoiceStatus, Prisma } from '@prisma/client';
+
+const scopeWhere = (scope: InvoiceScope): Prisma.InvoiceWhereInput =>
+  'userId' in scope
+    ? { userId: scope.userId }
+    : { user: { companyId: scope.companyId } };
 
 @Injectable()
 export class InvoicesRepository implements IInvoicesRepository {
@@ -17,16 +26,20 @@ export class InvoicesRepository implements IInvoicesRepository {
     return this.prisma.invoice.create({ data });
   }
 
-  async findAll(): Promise<InvoiceWithPlan[]> {
+  async findAll(companyId: string): Promise<InvoiceWithPlan[]> {
     return this.prisma.invoice.findMany({
+      where: { user: { companyId } },
       include: { plan: true },
       orderBy: { dueDate: 'desc' },
     });
   }
 
-  async findById(id: string): Promise<InvoiceWithPlan | null> {
-    return this.prisma.invoice.findUnique({
-      where: { id },
+  async findScopedById(
+    id: string,
+    scope: InvoiceScope,
+  ): Promise<InvoiceWithPlan | null> {
+    return this.prisma.invoice.findFirst({
+      where: { id, ...scopeWhere(scope) },
       include: { plan: true },
     });
   }
@@ -39,16 +52,22 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async existsForUserInMonth(userId: string, referenceMonth: string): Promise<boolean> {
+  async existsForUserInMonth(
+    userId: string,
+    referenceMonth: string,
+  ): Promise<boolean> {
     const count = await this.prisma.invoice.count({
       where: { userId, referenceMonth },
     });
     return count > 0;
   }
 
-  async findUnpaidWithPlan(): Promise<InvoiceWithPlan[]> {
+  async findUnpaidWithPlan(companyId?: string): Promise<InvoiceWithPlan[]> {
     return this.prisma.invoice.findMany({
-      where: { status: InvoiceStatus.UNPAID },
+      where: {
+        status: InvoiceStatus.UNPAID,
+        ...(companyId !== undefined && { user: { companyId } }),
+      },
       include: { plan: true },
     });
   }
@@ -62,7 +81,11 @@ export class InvoicesRepository implements IInvoicesRepository {
     });
   }
 
-  async updateStatus(id: string, status: InvoiceStatus, paidAt?: Date): Promise<Invoice> {
+  async updateStatus(
+    id: string,
+    status: InvoiceStatus,
+    paidAt?: Date,
+  ): Promise<Invoice> {
     return this.prisma.invoice.update({
       where: { id },
       data: {

@@ -1,13 +1,20 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsUUID } from 'class-validator';
+// Required fields are set by the ValidationPipe from the validated request body.
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateAssessmentSheetDto {
   @IsDateString()
   @IsNotEmpty()
-  date: string;
+  date!: string;
 
   @IsUUID()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @IsNumber() @IsOptional() altura?: number;
   @IsNumber() @IsOptional() peso?: number;

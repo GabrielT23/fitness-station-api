@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from '@modules/auth/providers/app-throttler.guard';
 
 import { configuration } from '@config/configuration';
 import { UsersModule } from '@modules/users';
@@ -21,6 +24,11 @@ import { PaymentsModule } from '@modules/payments/payments.module';
       load: [configuration],
     }),
     ScheduleModule.forRoot(),
+    // Global default: 300 requests per minute per user (or per IP when signed
+    // out; see AppThrottlerGuard). Auth endpoints override it.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+    }),
     UsersModule,
     AuthModule,
     PrismaModule,
@@ -32,6 +40,12 @@ import { PaymentsModule } from '@modules/payments/payments.module';
     PlansModule,
     InvoicesModule,
     PaymentsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AppThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

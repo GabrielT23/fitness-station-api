@@ -4,7 +4,10 @@ import { ICompaniesRepository } from '../ICompanies-repository';
 
 import { Company } from '@prisma/client';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { CreateCompanyDto, UpdateCompanyDto } from '@modules/companies/dtos/companyDTO';
+import {
+  CreateCompanyDto,
+  UpdateCompanyDto,
+} from '@modules/companies/dtos/companyDTO';
 
 @Injectable()
 export class CompaniesRepository implements ICompaniesRepository {
@@ -15,7 +18,10 @@ export class CompaniesRepository implements ICompaniesRepository {
     return newCompany;
   }
 
-  async update(id: string, company: Partial<UpdateCompanyDto>): Promise<Company> {
+  async update(
+    id: string,
+    company: Partial<UpdateCompanyDto>,
+  ): Promise<Company> {
     const companyUpdate = await this.prisma.company.update({
       where: { id },
       data: company,

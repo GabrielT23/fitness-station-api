@@ -1,33 +1,44 @@
+// Required fields are set by the ValidationPipe from the validated request body.
 import { OmitType, PartialType } from '@nestjs/mapped-types';
-import { IsString, IsEmail, IsEnum, IsNotEmpty, isObject, ValidateNested, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { Role } from '@prisma/client';
-
 
 export class CreateUserDto {
   @IsString({ message: 'Nome inválido' })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
-  username: string;
+  username!: string;
 
   @IsString({ message: 'Nome inválido' })
   @IsNotEmpty({ message: 'Nome é obrigatório' })
-  name: string
+  name!: string;
 
   @IsString()
   @IsNotEmpty({ message: 'senha é obrigatória' })
-  password: string;
+  password!: string;
 
   @IsEnum(Role)
   @IsOptional()
-  role: Role;
+  role?: Role;
 
-  @IsString({ message: 'CompanyId inválido' })
-  @IsNotEmpty({ message: 'CompanyId é obrigatório' })
+  /**
+   * Accepted for compatibility with the web client but IGNORED: the company
+   * always comes from the authenticated admin (see UsersService.create).
+   */
   @IsUUID()
-  companyId: string
-
+  @IsOptional()
+  companyId?: string;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto extends PartialType(
+  OmitType(CreateUserDto, ['companyId'] as const),
+) {}
 
 export class AssignPlanDto {
   @IsUUID()
@@ -52,4 +63,3 @@ export class UpdateProfileDto {
   @IsOptional()
   newPassword?: string;
 }
-

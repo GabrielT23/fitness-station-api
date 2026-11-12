@@ -7,7 +7,6 @@ import { usersRepositoryProvider } from '@modules/users/repositories/users-repos
 import { jwtConfig } from '@config/jwt';
 import { tokensRepositoryProvider } from './repositories/tokens-repository.provider';
 
-
 @Global()
 @Module({
   imports: [PassportModule, JwtModule.register(jwtConfig)],

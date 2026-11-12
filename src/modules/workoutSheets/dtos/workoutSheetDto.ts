@@ -1,23 +1,32 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsBoolean, ValidateNested, IsArray, Allow } from 'class-validator';
+// Required fields are set by the ValidationPipe from the validated request body.
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+  IsArray,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExerciseDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsNotEmpty()
-  reps: number;
+  reps!: number;
 
   @IsNotEmpty()
-  sets: number;
+  sets!: number;
 
   @IsString()
   @IsNotEmpty()
-  muscleGroup: string;
+  muscleGroup!: string;
 
   @IsNotEmpty()
-  restPeriod: number;
+  restPeriod!: number;
 
   @IsString()
   @IsOptional()
@@ -27,7 +36,7 @@ export class ExerciseDto {
 export class WorkoutDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsUUID()
   @IsOptional()
@@ -43,35 +52,36 @@ export class WorkoutDto {
 class UserDto {
   @IsUUID()
   @IsNotEmpty()
-  id: string;
+  id!: string;
 }
 
-export class LinkWorkoutSheetToUserDto{
+export class LinkWorkoutSheetToUserDto {
   @IsUUID()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @IsUUID()
   @IsNotEmpty()
-  workoutSheetId: string;
+  workoutSheetId!: string;
 }
 
 export class CreateWorkoutSheetDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsString()
   @IsNotEmpty()
-  type: string;
+  type!: string;
 
   @IsBoolean()
   @IsNotEmpty()
-  isActive: boolean;
+  isActive!: boolean;
 
+  /** Accepted for compatibility but ignored: the company always comes from the authenticated user. */
   @IsUUID()
-  @IsNotEmpty()
-  companyId: string;
+  @IsOptional()
+  companyId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -99,6 +109,7 @@ export class UpdateWorkoutSheetDto {
   @IsOptional()
   isActive?: boolean;
 
+  /** Accepted for compatibility but ignored: a sheet cannot be moved to another company. */
   @IsUUID()
   @IsOptional()
   companyId?: string;
@@ -113,7 +124,7 @@ export class SetActiveSheetDto {
 export class AdminSetActiveSheetDto {
   @IsUUID()
   @IsNotEmpty()
-  userId: string;
+  userId!: string;
 
   @IsUUID()
   @IsOptional()

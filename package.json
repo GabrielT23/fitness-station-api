@@ -7,17 +7,19 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "openapi": "node -r ./scripts/register-ts.js scripts/openapi.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -29,6 +31,8 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/platform-socket.io": "^10.4.22",
     "@nestjs/schedule": "^4.1.1",
+    "@nestjs/swagger": "^7.4.2",
+    "@nestjs/throttler": "^6.7.1",
     "@nestjs/websockets": "^10.4.22",
     "@prisma/client": "^6.5.0",
     "bcryptjs": "^3.0.2",
@@ -65,5 +69,12 @@
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.1.3"
+  },
+  "overrides": {
+    "body-parser": "^1.20.9",
+    "file-type": "^21.3.4",
+    "multer": "^2.5.0",
+    "qs": "^6.17.1",
+    "uuid": "^11.1.1"
   }
 }

@@ -13,16 +13,13 @@
     "incremental": true,
     "paths": {
       "@modules/*": ["./src/modules/*"],
-      "@config/*": ["./src/config/*"],
-      "@ports/*": ["./src/ports/*"],
-      "@helpers/*": ["./src/helpers/*"],
-      "@factory/*": ["./src/factory/*"]
+      "@config/*": ["./src/config/*"]
     },
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
   }
 }

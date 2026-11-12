@@ -1,7 +1,7 @@
 // filepath: d:\documentos\projetos\pessoais\fitness-station\fitness-station-api\src\config\configuration.ts
 import { z as zod } from 'zod';
-import * as dotenv from 'dotenv';
-dotenv.config();
+import { loadEnvFile } from './env-file';
+loadEnvFile();
 
 export interface Config {
   port: number;
@@ -9,7 +9,6 @@ export interface Config {
   hashSecret: string;
   jwtSecret: string;
 }
-
 
 export const configuration = (): Config => {
   const envSchema = zod.object({
@@ -33,4 +32,3 @@ export const configuration = (): Config => {
     jwtSecret: parsedEnv.data?.JWT_SECRET,
   };
 };
-

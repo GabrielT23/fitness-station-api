@@ -1,1 +1,1 @@
-export * from './workoutSheet.module'
+export * from './workoutSheet.module';

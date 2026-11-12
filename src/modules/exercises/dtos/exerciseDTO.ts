@@ -1,25 +1,32 @@
-import { IsString, IsNotEmpty, IsUUID, IsOptional, IsInt } from 'class-validator';
+// Required fields are set by the ValidationPipe from the validated request body.
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsOptional,
+  IsInt,
+} from 'class-validator';
 
 export class CreateExerciseDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @IsInt()
   @IsNotEmpty()
-  reps: number;
+  reps!: number;
 
   @IsInt()
   @IsNotEmpty()
-  sets: number;
+  sets!: number;
 
   @IsString()
   @IsNotEmpty()
-  muscleGroup: string;
+  muscleGroup!: string;
 
   @IsInt()
   @IsNotEmpty()
-  restPeriod: number;
+  restPeriod!: number;
 
   @IsString()
   @IsOptional()
@@ -27,7 +34,7 @@ export class CreateExerciseDto {
 
   @IsUUID()
   @IsNotEmpty()
-  workoutId: string;
+  workoutId!: string;
 }
 
 export class UpdateExerciseDto {

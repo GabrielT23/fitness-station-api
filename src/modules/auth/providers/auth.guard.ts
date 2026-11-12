@@ -11,8 +11,19 @@ import { RoleUser } from '../role.decorator';
 import { AuthService } from '../services/auth.service';
 import { configuration } from '@config/configuration';
 
-
 const config = configuration();
+
+/**
+ * Authenticated request user. `role` and `companyId` come from the database,
+ * not from the token, so a demoted, deleted or frozen user loses access on
+ * the next request.
+ */
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: 'admin' | 'client';
+  companyId: string;
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -29,23 +40,18 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
     try {
-      await this.jwtService.verifyAsync(token, {
+      const payload = await this.jwtService.verifyAsync(token, {
         secret: config.jwtSecret,
+        algorithms: ['HS256'],
       });
-      const { id, username, role } = this.authService.decodeToken(token);
-
-      request.user = {
-        id: id.toString(),
-        role,
-        username: username.toString(),
-      };
-      const roleNameFromAuth = this.reflector.get(
-        RoleUser,
+      // Role may be set on the handler or on the whole controller class.
+      const requiredRole = this.reflector.getAllAndOverride(RoleUser, [
         context.getHandler(),
-      );
-      await this.authService.checkRole({
-        username,
-        roleName: roleNameFromAuth,
+        context.getClass(),
+      ]);
+      request.user = await this.authService.authorize({
+        userId: String(payload.id),
+        requiredRole,
       });
     } catch {
       throw new UnauthorizedException();

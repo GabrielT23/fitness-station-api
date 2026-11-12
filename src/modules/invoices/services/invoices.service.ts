@@ -1,8 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '@modules/prisma/prisma.service';
-import { IInvoicesRepository, InvoiceWithPlan } from '../repositories/IInvoices-repository';
-import { CreateInvoiceDto, GenerateMonthlyInvoicesDto, UpdateInvoiceStatusDto } from '../dtos/invoiceDto';
+import type { AuthUser } from '@modules/auth/providers/auth.guard';
+import {
+  IInvoicesRepository,
+  InvoiceScope,
+  InvoiceWithPlan,
+} from '../repositories/IInvoices-repository';
+import {
+  CreateInvoiceDto,
+  GenerateMonthlyInvoicesDto,
+  UpdateInvoiceStatusDto,
+} from '../dtos/invoiceDto';
+
+export type Requester = Pick<AuthUser, 'id' | 'role' | 'companyId'>;
+
+const scopeOf = (requester: Requester): InvoiceScope =>
+  requester.role === 'admin'
+    ? { companyId: requester.companyId }
+    : { userId: requester.id };
 
 @Injectable()
 export class InvoicesService {
@@ -11,7 +31,8 @@ export class InvoicesService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async create(dto: CreateInvoiceDto) {
+  async create(dto: CreateInvoiceDto, requester: Requester) {
+    await this.findUserInScope(dto.userId, requester);
     return this.invoicesRepository.create({
       userId: dto.userId,
       planId: dto.planId,
@@ -21,38 +42,47 @@ export class InvoicesService {
     });
   }
 
-  async findAll() {
-    return this.invoicesRepository.findAll();
+  async findAll(requester: Requester) {
+    return this.invoicesRepository.findAll(requester.companyId);
   }
 
-  async findOne(id: string): Promise<InvoiceWithPlan> {
-    const invoice = await this.invoicesRepository.findById(id);
+  async findOne(id: string, requester: Requester): Promise<InvoiceWithPlan> {
+    const invoice = await this.invoicesRepository.findScopedById(
+      id,
+      scopeOf(requester),
+    );
     if (!invoice) throw new NotFoundException('Fatura não encontrada');
     return invoice;
   }
 
-  async findByUser(userId: string) {
+  async findByUser(userId: string, requester: Requester) {
+    await this.findUserInScope(userId, requester);
     return this.invoicesRepository.findByUserId(userId);
   }
 
-  async updateStatus(id: string, dto: UpdateInvoiceStatusDto) {
-    await this.findOne(id);
+  async updateStatus(
+    id: string,
+    dto: UpdateInvoiceStatusDto,
+    requester: Requester,
+  ) {
+    await this.findOne(id, requester);
     const paidAt = dto.status === InvoiceStatus.PAID ? new Date() : undefined;
     return this.invoicesRepository.updateStatus(id, dto.status, paidAt);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
+  async remove(id: string, requester: Requester): Promise<void> {
+    await this.findOne(id, requester);
     await this.invoicesRepository.deleteById(id);
   }
 
-  async generateForUser(userId: string, month?: string): Promise<{ created: boolean; message: string }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { plan: true },
-    });
-    if (!user) throw new NotFoundException('Usuário não encontrado');
-    if (!user.plan) throw new NotFoundException('Usuário não possui plano ativo');
+  async generateForUser(
+    userId: string,
+    requester: Requester,
+    month?: string,
+  ): Promise<{ created: boolean; message: string }> {
+    const user = await this.findUserInScope(userId, requester);
+    if (!user.plan)
+      throw new NotFoundException('Usuário não possui plano ativo');
     if (user.plan.isExclusive) {
       return { created: false, message: 'Plano exclusivo não gera faturas' };
     }
@@ -70,14 +100,26 @@ export class InvoicesService {
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
       if (new Date(lastInvoice.createdAt) > oneMonthAgo) {
-        return { created: false, message: 'Já existe uma fatura gerada há menos de 1 mês' };
+        return {
+          created: false,
+          message: 'Já existe uma fatura gerada há menos de 1 mês',
+        };
       }
     }
 
     const referenceMonth = month ?? this.currentMonth();
     const now = new Date();
     // dueDate = tomorrow at noon UTC (timezone-safe)
-    const dueDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 12, 0, 0));
+    const dueDate = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        12,
+        0,
+        0,
+      ),
+    );
 
     await this.invoicesRepository.create({
       userId: user.id,
@@ -87,10 +129,20 @@ export class InvoicesService {
       referenceMonth,
     });
 
-    return { created: true, message: `Fatura de ${referenceMonth} gerada com sucesso` };
+    return {
+      created: true,
+      message: `Fatura de ${referenceMonth} gerada com sucesso`,
+    };
   }
 
-  async generateMonthly(dto: GenerateMonthlyInvoicesDto): Promise<{ created: number; skipped: number }> {
+  /**
+   * Generates the month's invoices. With `companyId` (admin route) only that
+   * gym's clients are considered; without it (monthly cron job) every gym is.
+   */
+  async generateMonthly(
+    _dto: GenerateMonthlyInvoicesDto,
+    companyId?: string,
+  ): Promise<{ created: number; skipped: number }> {
     const usersWithPlans = await this.prisma.user.findMany({
       where: {
         role: 'client',
@@ -98,6 +150,7 @@ export class InvoicesService {
         deletedAt: null,
         planId: { not: null },
         plan: { isExclusive: false, isActive: true },
+        ...(companyId !== undefined && { companyId }),
       },
       include: { plan: true },
     });
@@ -108,7 +161,16 @@ export class InvoicesService {
     const now = new Date();
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    const dueDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 12, 0, 0));
+    const dueDate = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        12,
+        0,
+        0,
+      ),
+    );
     const referenceMonth = this.currentMonth();
 
     for (const user of usersWithPlans) {
@@ -135,17 +197,29 @@ export class InvoicesService {
     return { created, skipped };
   }
 
-  async markOverdue(): Promise<{ updated: number }> {
-    const unpaid = await this.invoicesRepository.findUnpaidWithPlan();
+  /**
+   * Marks overdue invoices. With `companyId` (admin route) only that gym's
+   * invoices are touched; without it (midnight cron job) every gym is.
+   */
+  async markOverdue(companyId?: string): Promise<{ updated: number }> {
+    const unpaid = await this.invoicesRepository.findUnpaidWithPlan(companyId);
     const now = new Date();
     // Strip time — compare calendar dates only in UTC to avoid midnight-job false negatives
-    const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const todayUTC = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
 
     const overdueIds = unpaid
       .filter((invoice) => {
         const d = new Date(invoice.dueDate);
         // deadline = dueDate + toleranceDays; overdue when today >= deadline
-        const deadlineUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + invoice.plan.toleranceDays);
+        const deadlineUTC = Date.UTC(
+          d.getUTCFullYear(),
+          d.getUTCMonth(),
+          d.getUTCDate() + invoice.plan.toleranceDays,
+        );
         return todayUTC >= deadlineUTC;
       })
       .map((invoice) => invoice.id);
@@ -157,13 +231,11 @@ export class InvoicesService {
     return { updated: overdueIds.length };
   }
 
-  async getPaymentStatus(userId: string): Promise<{ status: 'CREDITOR' | 'DEBTOR' }> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { plan: true },
-    });
-
-    if (!user) throw new NotFoundException('Usuário não encontrado');
+  async getPaymentStatus(
+    userId: string,
+    requester: Requester,
+  ): Promise<{ status: 'CREDITOR' | 'DEBTOR' }> {
+    const user = await this.findUserInScope(userId, requester);
 
     if (!user.plan || user.plan.isExclusive) {
       return { status: 'CREDITOR' };
@@ -173,7 +245,9 @@ export class InvoicesService {
     return { status: pending.length > 0 ? 'DEBTOR' : 'CREDITOR' };
   }
 
-  async getBillingCheck(userId: string): Promise<{ status: 'OK' | 'UNPAID_WARNING' | 'BLOCKED' }> {
+  async getBillingCheck(
+    userId: string,
+  ): Promise<{ status: 'OK' | 'UNPAID_WARNING' | 'BLOCKED' }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { plan: true },
@@ -194,6 +268,27 @@ export class InvoicesService {
     if (hasUnpaid > 0) return { status: 'UNPAID_WARNING' };
 
     return { status: 'OK' };
+  }
+
+  /**
+   * Loads a user the requester may act on: a client only themselves, an admin
+   * only users of their own gym (others are reported as not found).
+   */
+  private async findUserInScope(userId: string, requester: Requester) {
+    if (requester.role !== 'admin' && userId !== requester.id) {
+      throw new ForbiddenException('Acesso negado às faturas de outro usuário');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { plan: true },
+    });
+    if (
+      !user ||
+      (requester.role === 'admin' && user.companyId !== requester.companyId)
+    ) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+    return user;
   }
 
   private currentMonth(): string {

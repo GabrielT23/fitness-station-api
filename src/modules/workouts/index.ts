@@ -1,1 +1,1 @@
-export * from './workouts.module'
+export * from './workouts.module';

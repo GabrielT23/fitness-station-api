@@ -2,21 +2,60 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main, master, develop, dev, staging, prod ]
   push:
-    branches: [ main, master ]
+    branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Every step is a Makefile target: CI runs exactly what `make` runs locally.
 jobs:
-  test:
+  check:
+    name: check (format, lint, types, docs, OpenAPI)
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm ci
-      - name: Run tests
-        run: npm test
+          node-version: '22'
+          cache: npm
+      - run: make install
+      - run: make check
+
+  test:
+    name: test (Jest + 60% coverage floor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: make install
+      - run: make coverage
+
+  # Wall-clock budget for the whole pipeline (project-standard / test-speed): 180 s.
+  gate:
+    name: gate (CI under 180 s)
+    needs: [check, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Jobs passed
+        if: needs.check.result != 'success' || needs.test.result != 'success'
+        run: exit 1
+      - name: Wall clock under 180 s
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}" --jq .run_started_at)
+          elapsed=$(( $(date +%s) - $(date -d "$started" +%s) ))
+          echo "CI took ${elapsed}s (budget 180s)"
+          if [ "$elapsed" -gt 180 ]; then
+            echo "::error::CI took ${elapsed}s, over the 180 s budget. See the test-speed playbook."
+            exit 1
+          fi
